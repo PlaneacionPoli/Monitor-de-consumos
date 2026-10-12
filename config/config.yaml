@@ -1,0 +1,331 @@
+# PoliEcoConsumo - Configuración de Extracción de Facturas
+# Proyecto de extracción masiva de información de facturas de Energía y Acueducto
+
+proyecto:
+  nombre: "PoliEcoConsumo"
+  version: "1.0.0"
+  descripcion: "Extracción masiva de facturas de Energía y Acueducto para Bogotá y Medellín"
+
+# Ciudades soportadas
+ciudades:
+  - nombre: "Bogotá"
+    codigo: "BOG"
+    zona_horaria: "America/Bogota"
+  - nombre: "Medellín"
+    codigo: "MED"
+    zona_horaria: "America/Bogota"
+
+# Servicios disponibles
+servicios:
+  energia:
+    nombre: "Energía"
+    campos_requeridos:
+      - "no_factura"
+      - "periodo_inicio"
+      - "periodo_fin"
+      - "direccion"
+      - "valor_factura"
+      - "fecha_pago"
+      - "no_cuenta_contrato"
+      - "consumo_kwh"
+    campos_opcionales:
+      - "proveedor"
+      - "ciudad"
+      - "codigo_cliente"
+
+  acueducto:
+    nombre: "Acueducto y Alcantarillado"
+    campos_requeridos:
+      - "no_factura"
+      - "periodo_inicio"
+      - "periodo_fin"
+      - "direccion"
+      - "compania"
+      - "valor_acueducto"
+      - "recoleccion_basuras"
+      - "valor_total"
+      - "fecha_pago"
+      - "contrato"
+      - "consumo_m3"
+    campos_opcionales:
+      - "ciudad"
+      - "codigo_cliente"
+
+# Plantillas por proveedor de ENERGÍA
+proveedores_energia:
+  bogota:
+    - nombre: "Codensa"
+      codigo: "CODENSA"
+      patron_factura: "^[0-9]{10}$"
+      campos:
+        no_factura:
+          sinonimos: ["No. FACTURA", "Factura No.", "Número de Factura", "No Factura"]
+          tipo: "string"
+          patron: "\\d{10}"
+        periodo_inicio:
+          sinonimos: ["Período Inicio", "Periodo Inicio", "Desde", "Fecha Inicio"]
+          tipo: "date"
+          formato: ["DD/MM/YYYY", "YYYY-MM-DD", "DD-MM-YYYY"]
+        periodo_fin:
+          sinonimos: ["Período Final", "Periodo Fin", "Hasta", "Fecha Fin"]
+          tipo: "date"
+          formato: ["DD/MM/YYYY", "YYYY-MM-DD", "DD-MM-YYYY"]
+        direccion:
+          sinonimos: ["Dirección", "Direccion", "Dirección del servicio"]
+          tipo: "string"
+        valor_factura:
+          sinonimos: ["Valor Factura", "Valor Total", "Total a Pagar", "Valor"]
+          tipo: "currency"
+          simbolo: "$"
+        fecha_pago:
+          sinonimos: ["Fecha de Pago", "Fecha Límite de Pago", "Vencimiento"]
+          tipo: "date"
+          formato: ["DD/MM/YYYY", "YYYY-MM-DD"]
+        no_cuenta_contrato:
+          sinonimos: ["No. Cuenta", "No. Contrato", "Número de Contrato", "Cuenta Contrato"]
+          tipo: "string"
+        consumo_kwh:
+          sinonimos: ["Consumo kWh", "Consumo", "kWh", "Consumo kWh"]
+          tipo: "number"
+          unidad: "kWh"
+      prioridad: 1
+
+    - nombre: "Enel Colombia"
+      codigo: "ENEL_CO"
+      patron_factura: "^[A-Z0-9]{8,12}$"
+      campos:
+        no_factura:
+          sinonimos: ["No. FACTURA", "Factura", "Número"]
+          tipo: "string"
+        periodo_inicio:
+          sinonimos: ["Período", "Periodo"]
+          tipo: "date"
+        periodo_fin:
+          sinonimos: ["Hasta"]
+          tipo: "date"
+        direccion:
+          sinonimos: ["Dirección", "Direccion"]
+          tipo: "string"
+        valor_factura:
+          sinonimos: ["Total", "Valor Total"]
+          tipo: "currency"
+        fecha_pago:
+          sinonimos: ["Vencimiento", "Fecha Pago"]
+          tipo: "date"
+        no_cuenta_contrato:
+          sinonimos: ["Cuenta", "Contrato"]
+          tipo: "string"
+        consumo_kwh:
+          sinonimos: ["Consumo", "kWh"]
+          tipo: "number"
+      prioridad: 2
+
+  medellin:
+    - nombre: "EPM"
+      codigo: "EPM"
+      patron_factura: "^[0-9]{9,11}$"
+      campos:
+        no_factura:
+          sinonimos: ["No. FACTURA", "Factura", "Referencia"]
+          tipo: "string"
+        periodo_inicio:
+          sinonimos: ["Período Inicio", "Fecha Inicial"]
+          tipo: "date"
+        periodo_fin:
+          sinonimos: ["Período Fin", "Fecha Final"]
+          tipo: "date"
+        direccion:
+          sinonimos: ["Dirección", "Direccion Servicio"]
+          tipo: "string"
+        valor_factura:
+          sinonimos: ["Valor Factura", "Total"]
+          tipo: "currency"
+        fecha_pago:
+          sinonimos: ["Fecha Límite", "Vencimiento"]
+          tipo: "date"
+        no_cuenta_contrato:
+          sinonimos: ["No. Contrato", "Cuenta"]
+          tipo: "string"
+        consumo_kwh:
+          sinonimos: ["Consumo", "kWh"]
+          tipo: "number"
+      prioridad: 1
+
+# Plantillas por proveedor de ACUEDUCTO
+proveedores_acueducto:
+  bogota:
+    - nombre: "EAAB - Empresa de Acueducto de Bogotá"
+      codigo: "EAAB"
+      patron_factura: "^[0-9]{8,12}$"
+      campos:
+        no_factura:
+          sinonimos: ["No. FACTURA", "Factura", "Número de Factura"]
+          tipo: "string"
+        periodo_inicio:
+          sinonimos: ["Período Inicio", "Desde"]
+          tipo: "date"
+        periodo_fin:
+          sinonimos: ["Período Fin", "Hasta"]
+          tipo: "date"
+        direccion:
+          sinonimos: ["Dirección", "Direccion"]
+          tipo: "string"
+        compania:
+          sinonimos: ["Empresa", "Compañía", "Prestador"]
+          tipo: "string"
+          valor_default: "EAAB"
+        valor_acueducto:
+          sinonimos: ["Valor Acueducto", "Servicio de Agua", "Consumo"]
+          tipo: "currency"
+        recoleccion_basuras:
+          sinonimos: ["Recolección Basuras", "Aseo", "Basura"]
+          tipo: "currency"
+        valor_total:
+          sinonimos: ["Valor Total", "Total a Pagar", "Total"]
+          tipo: "currency"
+        fecha_pago:
+          sinonimos: ["Fecha de Pago", "Vencimiento", "Fecha Límite"]
+          tipo: "date"
+        contrato:
+          sinonimos: ["Contrato", "No. Contrato", "Número de Contrato"]
+          tipo: "string"
+        consumo_m3:
+          sinonimos: ["Consumo m3", "Consumo", "m3"]
+          tipo: "number"
+          unidad: "m3"
+      prioridad: 1
+
+  medellin:
+    - nombre: "EPM Aguas"
+      codigo: "EPM_AGUAS"
+      patron_factura: "^[0-9]{9,11}$"
+      campos:
+        no_factura:
+          sinonimos: ["No. FACTURA", "Factura"]
+          tipo: "string"
+        periodo_inicio:
+          sinonimos: ["Período", "Desde"]
+          tipo: "date"
+        periodo_fin:
+          sinonimos: ["Hasta"]
+          tipo: "date"
+        direccion:
+          sinonimos: ["Dirección"]
+          tipo: "string"
+        compania:
+          sinonimos: ["Empresa", "Compañía"]
+          tipo: "string"
+          valor_default: "EPM Aguas"
+        valor_acueducto:
+          sinonimos: ["Acueducto", "Consumo"]
+          tipo: "currency"
+        recoleccion_basuras:
+          sinonimos: ["Aseo", "Basura"]
+          tipo: "currency"
+        valor_total:
+          sinonimos: ["Total", "Valor Total"]
+          tipo: "currency"
+        fecha_pago:
+          sinonimos: ["Vencimiento"]
+          tipo: "date"
+        contrato:
+          sinonimos: ["Contrato"]
+          tipo: "string"
+        consumo_m3:
+          sinonimos: ["Consumo", "m3"]
+          tipo: "number"
+      prioridad: 1
+
+# Configuración de OCR
+ocr:
+  motor: "tesseract"
+  ruta_tesseract: "C:/Program Files/Tesseract-OCR/tesseract.exe"
+  tessdata_dir: "config/tessdata"
+  idioma: "spa"
+  config_tesseract: "--psm 6 --oem 3"
+  preprocesamiento:
+    escala: 1.5
+    threshold_gris: 128
+    kernel_size: [3, 3]
+    dilate_iterations: 1
+
+# Configuración de salida
+salida:
+  formato_excel: "xlsx"
+  separador_libros:
+    energia: "Energia"
+    acueducto: "Acueducto"
+  carpeta_salida: "data/outputs"
+  nombre_archivo: "facturas_{fecha}.xlsx"
+  columnas_salida:
+    energia:
+      - "No.FACTURA"
+      - "PERIODO INICIO"
+      - "PERIODO FINAL"
+      - "DIRECCION"
+      - "PROVEEDOR"
+      - "VALOR FACT."
+      - "FECHA DE PAGO"
+      - "No.CUENTA CONTRATO"
+      - "CONSUMO Kwh"
+      - "CIUDAD"
+      - "TIPO"
+      - "ARCHIVO ORIGEN"
+      - "FECHA EXTRACCION"
+    acueducto:
+      - "No. FACTURA"
+      - "PERIODO INICIO"
+      - "PERIODO FIN"
+      - "DIRECCION"
+      - "COMPAÑÍA"
+      - "VALOR ACUEDUCTO"
+      - "RECOLECCION BASURAS"
+      - "VALOR TOTAL"
+      - "FECHA DE PAGO"
+      - "CONTRATO"
+      - "CONSUMO M3"
+      - "CIUDAD"
+      - "TIPO"
+      - "ARCHIVO ORIGEN"
+      - "FECHA EXTRACCION"
+
+# Configuración de logging
+logging:
+  nivel: "INFO"
+  formato: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  archivo: "logs/poli_ecologico.log"
+  max_bytes: 10485760
+  backup_count: 5
+
+# Configuración de validación
+validacion:
+  validar_fechas: true
+  validar_montos: true
+  validar_consumo: true
+  permitir_campos_vacios: false
+  duplicados:
+    verificar: true
+    campos_clave: ["no_factura", "proveedor", "ciudad"]
+
+# Configuración del watcher
+watcher:
+  carpeta_entrada: "data/invoices_inbox"
+  extensiones_permitidas: [".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".bmp"]
+  intervalo_segundos: 5
+  mover_procesados: true
+  carpeta_procesados: "data/processed"
+
+# Configuración de dashboard
+dashboard:
+  puerto: 8050
+  titulo: "PoliEcoConsumo - Dashboard de Facturas"
+  auto_refresh: 30
+  temas:
+    bg_color: "#0b1326"
+    card_color: "#171f33"
+    primary_color: "#adc6ff"
+    tertiary: "#10b981"
+    surface_variant: "#2d3449"
+    outline_variant: "#424754"
+    on_surface: "#dae2fd"
+    on_surface_variant: "#c2c6d6"

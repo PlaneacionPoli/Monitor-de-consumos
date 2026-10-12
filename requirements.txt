@@ -1,0 +1,63 @@
+# PoliEcoConsumo - Requerimientos del Proyecto
+# Extracción masiva de facturas de Energía y Acueducto
+
+# === Core ===
+python-dotenv>=1.0.0
+PyYAML>=6.0.2
+
+# === OCR y Procesamiento de Imágenes ===
+pytesseract>=0.3.13
+Pillow>=11.1.0
+opencv-python>=4.11.0
+pymupdf>=1.24.0
+
+# === Extracción y Procesamiento de Datos ===
+pandas>=2.2.3
+numpy>=2.2.4
+openpyxl>=3.1.5
+
+# === Backend y API ===
+fastapi>=0.115.0
+uvicorn>=0.34.0
+python-multipart>=0.0.18
+
+# === Dashboard y Visualización ===
+dash>=2.18.2
+plotly>=5.25.0
+
+# === Pipeline y Orquestación ===
+dagster>=1.10.0
+dagster-cloud>=1.10.0
+
+# === Base de Datos ===
+mysql-connector-python>=9.2.0
+sqlalchemy>=2.0.36
+
+# === Observabilidad y Monitoreo ===
+prometheus-client>=0.21.1
+
+# === Seguridad ===
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# === Testing ===
+pytest>=8.3.4
+pytest-cov>=6.0.0
+pytest-asyncio>=0.25.0
+
+# === Utilidades ===
+watchdog>=6.0.0
+python-dateutil>=2.9.0
+httpx>=0.28.1
+tenacity>=9.0.0
+
+# === Desarrollo ===
+black>=24.10.0
+flake8>=7.1.1
+mypy>=1.15.0
+isort>=5.13.2
+
+# Nota: Tesseract OCR debe instalarse por separado en el sistema
+# Windows: https://github.com/UB-Mannheim/tesseract/wiki
+# Linux: sudo apt-get install tesseract-ocr
+# macOS: brew install tesseract

@@ -1,0 +1,209 @@
+/* PoliEcoConsumo - Custom Styles */
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    vertical-align: middle;
+}
+.chart-bar {
+    transition: height 1s ease-in-out;
+}
+.glass-card {
+    background: rgba(23, 31, 51, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(140, 144, 159, 0.2);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #131b2e;
+}
+::-webkit-scrollbar-thumb {
+    background: #424754;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #8c909f;
+}
+::selection {
+    background-color: #adc6ff;
+    color: #002e6a;
+}
+
+/* Dash DataTable dark mode */
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner table {
+    --accent: #adc6ff;
+    --border: #424754;
+    --text-color: #dae2fd;
+    --hover: #3a4a5f;
+    --background-color-ellipse: #171f33;
+    --background-color: #171f33;
+}
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td {
+    background-color: #171f33 !important;
+    color: #dae2fd !important;
+    border-color: #424754 !important;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    padding: 10px 12px !important;
+}
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
+    background-color: #1e3a8a !important;
+    color: #dae2fd !important;
+    border-color: #424754 !important;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 10px 12px !important;
+}
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th input {
+    background-color: #131b2e !important;
+    color: #dae2fd !important;
+    border: 1px solid #424754 !important;
+    border-radius: 4px !important;
+    padding: 4px 6px !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 12px !important;
+}
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th input:focus {
+    border-color: #adc6ff !important;
+    outline: none !important;
+}
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th .column-header--sort {
+    margin-right: 4px;
+}
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th .sort {
+    color: #dae2fd !important;
+}
+
+/* Plotly background oscuro */
+.js-plotly-plot .plotly .main-svg {
+    background: #171f33 !important;
+}
+.js-plotly-plot .plotly .svg-container {
+    background: #171f33 !important;
+}
+
+/* Dash Dropdown dark mode */
+.dash-dropdown .Select-control {
+    background-color: #131b2e !important;
+    border: 1px solid #424754 !important;
+    border-radius: 0.5rem !important;
+    color: #dae2fd !important;
+    min-height: 36px !important;
+    height: 36px !important;
+}
+.dash-dropdown .Select-control .Select-value-label {
+    color: #dae2fd !important;
+    line-height: 34px !important;
+}
+.dash-dropdown .Select-placeholder {
+    color: #c2c6d6 !important;
+    line-height: 34px !important;
+}
+.dash-dropdown .Select-menu-outer {
+    background-color: #171f33 !important;
+    border: 1px solid #424754 !important;
+    border-radius: 0.5rem !important;
+    z-index: 100 !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important;
+}
+.dash-dropdown .Select-option {
+    background-color: #171f33 !important;
+    color: #dae2fd !important;
+    padding: 8px 12px !important;
+}
+.dash-dropdown .Select-option:hover,
+.dash-dropdown .Select-option.is-focused {
+    background-color: #2d3449 !important;
+    color: #dae2fd !important;
+}
+.dash-dropdown .Select-option.is-selected {
+    background-color: #1e3a8a !important;
+    color: #adc6ff !important;
+}
+.dash-dropdown .Select-arrow {
+    border-color: #c2c6d6 transparent transparent !important;
+    border-width: 5px 5px 2.5px !important;
+}
+.dash-dropdown .is-focused .Select-control {
+    border-color: #adc6ff !important;
+    box-shadow: 0 0 0 1px rgba(173, 198, 255, 0.3) !important;
+}
+.dash-dropdown .Select-clear {
+    color: #c2c6d6 !important;
+    font-size: 16px !important;
+}
+.dash-dropdown .Select-clear:hover {
+    color: #ffb4ab !important;
+}
+.dash-dropdown .Select-input {
+    height: 34px !important;
+}
+.dash-dropdown .Select-input > input {
+    color: #dae2fd !important;
+}
+.dash-dropdown .Select-arrow-zone {
+    padding-right: 8px !important;
+    background-color: #131b2e !important;
+}
+.dash-dropdown .Select-arrow-zone:hover {
+    background-color: #2d3449 !important;
+}
+.dash-dropdown .Select-clear-zone {
+    background-color: #131b2e !important;
+}
+.dash-dropdown .Select-clear-zone:hover {
+    background-color: #2d3449 !important;
+}
+.dash-dropdown .Select-value {
+    line-height: 34px !important;
+}
+.dash-dropdown.is-open .Select-control {
+    border-color: #adc6ff !important;
+}
+
+/* Dash DatePicker / other components */
+.dash-graph .plot-container .plotly .user-select-none {
+    -webkit-user-select: none !important;
+}
+
+/* Pagination dark mode */
+.dash-table-container .previous-next-container {
+    padding: 8px 0 !important;
+    background-color: transparent !important;
+}
+.dash-table-container .previous-next-container .page-number {
+    color: #dae2fd !important;
+    background-color: #131b2e !important;
+    border: 1px solid #424754 !important;
+    border-radius: 4px !important;
+    margin: 0 2px !important;
+    padding: 4px 10px !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 12px !important;
+}
+.dash-table-container .previous-next-container .page-number:hover {
+    background-color: #2d3449 !important;
+    border-color: #adc6ff !important;
+    color: #adc6ff !important;
+}
+.dash-table-container .previous-next-container .page-number.current-page {
+    background-color: #1e3a8a !important;
+    border-color: #adc6ff !important;
+    color: #dae2fd !important;
+    font-weight: 600 !important;
+}
+.dash-table-container .previous-next-container .page-number.disabled {
+    opacity: 0.4 !important;
+    cursor: default !important;
+}
+
+/* DataTable row hover */
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td:hover {
+    background-color: #3a4a5f !important;
+}

@@ -1,0 +1,5 @@
+echarts.min.js - Apache ECharts 6.1.0 (licencia Apache 2.0, cabecera incluida en el archivo)
+Origen : https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js (paquete npm "echarts")
+SHA-256: b66b25aeb4df84e33199dc21694014d336d222cbd9deb0e5a7c14bd6aa0d0fd0
+Se publica junto al sitio para que NO se cargue nada de terceros en el navegador.
+Para actualizar: descargar la nueva version, verificar su cabecera y version, y actualizar esta nota.

@@ -1,0 +1,19 @@
+# Facturas reales y salidas: contienen datos contractuales y personales
+data/
+
+# Accesos del dashboard publicado (correos y contrasenas): nunca versionar
+config/accesos_dashboard.txt
+accesos_dashboard.csv
+
+# Secretos y entorno
+.env
+*.pem
+*.key
+
+# Generados
+__pycache__/
+.pytest_cache/
+*.pyc
+*.db
+
+# OJO: site/ SI se versiona; solo contiene el sitio y data.enc.json (cifrado).
