@@ -25,8 +25,6 @@ button.secundario{background:transparent;color:var(--texto);border:1px solid var
 button:disabled{opacity:.5;cursor:default}
 :focus-visible{outline:2px solid var(--acento);outline-offset:2px}
 
-.login{min-height:100vh;display:grid;place-items:center;padding:1rem}
-.login-caja{width:100%;max-width:380px;display:flex;flex-direction:column;gap:.9rem}
 
 #app{max-width:1280px;margin:0 auto;padding:0 16px 40px}
 .barra{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 0}
@@ -125,3 +123,65 @@ dt{color:var(--suave)} dd{margin:0;word-break:break-word}
 .kpi .valor{font-size:1.45rem;line-height:1.2}
 .kpi .valor .unidad{font-size:.8rem;font-weight:500;color:var(--suave)}
 .kpis{grid-template-columns:repeat(auto-fit,minmax(185px,1fr))}
+
+/* ---- v4: inicio de sesion (modo claro, tema ambiental, paleta Poli) ---- */
+.login{
+  --fondo:#fff; --tarjeta:#fff; --texto:#263A58; --suave:#5a6a82; --borde:#d5dde8;
+  --acento:#22B2DE; --acento-texto:#fff; --error:#b3261e;
+  color-scheme:light; background:#fff; color:var(--texto);
+  font-family:Montserrat,Poppins,system-ui,"Segoe UI",sans-serif;
+  min-height:100vh;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);
+}
+.escena{position:relative;overflow:hidden;background:#e6f7fc;min-height:200px}
+.escena>svg{position:absolute;inset:0;width:100%;height:100%}
+.escena-texto{position:absolute;left:clamp(1.5rem,5vw,4rem);right:1.5rem;top:clamp(1.5rem,7vh,4rem);color:#263A58;animation:entra .9s .15s both}
+.eyebrow{margin:0 0 .5rem;font-size:.78rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#0b7fa3}
+.lema{margin:0 0 1.2rem;font-size:clamp(1.5rem,2.6vw,2.3rem);line-height:1.2;font-weight:700}
+.iconos-servicio{list-style:none;margin:0;padding:0;display:flex;gap:.6rem;flex-wrap:wrap}
+.iconos-servicio li{display:inline-flex;align-items:center;gap:.45rem;padding:.35rem .8rem .35rem .55rem;border-radius:99px;background:rgba(255,255,255,.85);border:1px solid #bfe6f3;font-size:.85rem;font-weight:600;animation:flota 5s ease-in-out infinite}
+.iconos-servicio li:nth-child(2){animation-delay:-1.6s} .iconos-servicio li:nth-child(3){animation-delay:-3.2s}
+.iconos-servicio svg{width:1.1rem;height:1.1rem;fill:none;stroke:#263A58;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+.acceso{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1.2rem;padding:2rem 1.25rem}
+.login-caja{width:100%;max-width:400px;display:flex;flex-direction:column;gap:.9rem;animation:entra .8s both}
+.login-caja .logo{width:150px;height:auto;align-self:flex-start;margin:0 0 .6rem -.3rem}
+.login-caja h1{font-size:1.5rem;line-height:1.25;font-weight:700;color:#263A58}
+.login-caja p{margin:0}
+.login input{background:#f7fafc;border:1.5px solid var(--borde);padding:.7rem .8rem;border-radius:10px;color:#263A58;transition:border-color .2s,box-shadow .2s,background .2s}
+.login input:focus{outline:0;border-color:#22B2DE;background:#fff;box-shadow:0 0 0 4px rgba(34,178,222,.18)}
+.login button[type=submit]{position:relative;overflow:hidden;background:#263A58;color:#fff;padding:.8rem 1rem;border-radius:10px;font-size:1rem;transition:transform .15s,box-shadow .2s,background .2s}
+.login button[type=submit]::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:brillo 4.5s 1.5s infinite}
+.login button[type=submit]:hover:not(:disabled){background:#1d2e48;transform:translateY(-1px);box-shadow:0 8px 18px -8px rgba(38,58,88,.6)}
+.login :focus-visible{outline:2px solid #22B2DE;outline-offset:2px}
+.legal{margin:0;font-size:.7rem;color:#5a6a82}
+
+.rayos{animation:gira 40s linear infinite} .halo{animation:pulso 5s ease-in-out infinite}
+.nube{animation:deriva 38s linear infinite alternate} .nube.n2{animation-duration:55s}
+.aspas{animation:gira 7s linear infinite} .aspas.lento{animation-duration:11s}
+.arbol{transform-origin:0 62px;animation:mece 6s ease-in-out infinite}
+.ola{animation:ola 11s linear infinite} .ola.o1{transform:translateY(660px)} .ola.o2{transform:translateY(640px);animation-duration:16s}
+.ola.o3{transform:translateY(620px);animation-duration:22s;animation-direction:reverse}
+.hoja{animation:cae 14s linear infinite} .hoja.h1{--x:60px;animation-delay:-2s} .hoja.h2{--x:260px;animation-delay:-7s;animation-duration:17s}
+.hoja.h3{--x:430px;animation-delay:-11s;animation-duration:19s} .hoja.h4{--x:170px;animation-delay:-5s;animation-duration:16s}
+.gota{animation:gota 3.6s ease-in infinite;transform:translate(330px,230px)}
+.burb{animation:sube 9s ease-in infinite} .b2{animation-delay:-2s;animation-duration:7s} .b3{animation-delay:-4s;animation-duration:11s}
+.b4{animation-delay:-6s;animation-duration:8s} .b5{animation-delay:-1s;animation-duration:10s}
+@keyframes gira{to{transform:rotate(360deg)}}
+@keyframes pulso{50%{transform:scale(1.12);opacity:.8}}
+@keyframes deriva{from{transform:translateX(-30px)}to{transform:translateX(70px)}}
+@keyframes mece{50%{transform:rotate(2.5deg)}}
+@keyframes ola{from{translate:0 0}to{translate:-300px 0}}
+@keyframes cae{0%{transform:translate(var(--x),-40px) rotate(0)}50%{transform:translate(calc(var(--x) + 50px),340px) rotate(180deg)}100%{transform:translate(calc(var(--x) - 20px),640px) rotate(360deg)}}
+@keyframes gota{0%{transform:translate(330px,230px) scale(.4);opacity:0}15%{opacity:1;transform:translate(330px,250px) scale(1)}85%{opacity:1}100%{transform:translate(330px,640px) scale(1);opacity:0}}
+@keyframes sube{0%{transform:translateY(0);opacity:0}15%{opacity:.9}100%{transform:translateY(-190px);opacity:0}}
+@keyframes entra{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes flota{50%{transform:translateY(-5px)}}
+@keyframes brillo{0%,55%{left:-60%}100%{left:130%}}
+@media (max-width:860px){
+  .login{grid-template-columns:1fr;grid-template-rows:200px auto}
+  .escena-texto{display:none}
+  .acceso{justify-content:flex-start;padding-top:1.5rem}
+}
+@media (prefers-reduced-motion:reduce){
+  .login *,.login *::before,.login *::after{animation:none!important;transition:none!important}
+}

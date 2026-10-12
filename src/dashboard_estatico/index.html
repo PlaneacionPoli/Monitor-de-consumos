@@ -10,19 +10,95 @@
 </head>
 <body>
 <main id="login" class="login">
-  <form id="form-login" class="tarjeta login-caja" autocomplete="on">
-    <h1>Monitor de Consumos Ambientales</h1>
-    <p class="suave">Acceso restringido a usuarios autorizados.</p>
-    <label>Correo
-      <input id="correo" type="email" name="username" autocomplete="username" required>
-    </label>
-    <label>Contraseña
-      <input id="clave" type="password" name="password" autocomplete="current-password" required>
-    </label>
-    <button id="entrar" type="submit">Ingresar</button>
-    <p id="msg-login" class="error" role="alert" hidden></p>
-    <p class="suave pequeno">Los datos están cifrados y se descifran en este navegador. Nada se envía a ningún servidor.</p>
-  </form>
+  <section class="escena" aria-hidden="true">
+    <svg viewBox="0 0 600 800" preserveAspectRatio="xMidYMid slice" focusable="false">
+      <defs>
+        <linearGradient id="cielo" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#e6f7fc"/><stop offset="1" stop-color="#f6fbf0"/>
+        </linearGradient>
+        <radialGradient id="sol" cx=".5" cy=".5" r=".5">
+          <stop offset="0" stop-color="#F7B400" stop-opacity=".95"/><stop offset="1" stop-color="#F7B400" stop-opacity="0"/>
+        </radialGradient>
+        <path id="hoja" d="M0 0C18-26 52-26 68 0C52 26 18 26 0 0Z"/>
+      </defs>
+      <rect width="600" height="800" fill="url(#cielo)"/>
+      <g transform="translate(470 150)">
+        <circle r="120" fill="url(#sol)" class="halo"/>
+        <g class="rayos" stroke="#F7B400" stroke-width="3" stroke-linecap="round" opacity=".7">
+          <path d="M0-78V-96M0 78V96M-78 0H-96M78 0H96M55-55l13-13M-55 55l-13 13M55 55l13 13M-55-55l-13-13"/>
+        </g>
+        <circle r="52" fill="#F7B400" opacity=".9"/>
+      </g>
+      <g class="nube n1"><path d="M60 210a26 26 0 0 1 50-8a22 22 0 0 1 36 18H70a16 16 0 0 1-10-10z" fill="#fff"/></g>
+      <g class="nube n2"><path d="M300 120a20 20 0 0 1 38-6a17 17 0 0 1 28 14H306a12 12 0 0 1-6-8z" fill="#fff" opacity=".85"/></g>
+
+      <path d="M0 470C110 400 230 410 330 450S520 480 600 420V800H0Z" fill="#dbe97a" opacity=".55"/>
+      <path d="M0 520C120 470 240 470 350 510S520 540 600 500V800H0Z" fill="#B1C900" opacity=".5"/>
+      <g transform="translate(118 468)"><g class="arbol">
+        <rect x="-5" y="-6" width="10" height="70" rx="4" fill="#263A58" opacity=".85"/>
+        <circle cx="0" cy="-38" r="42" fill="#B1C900"/>
+        <circle cx="-26" cy="-14" r="28" fill="#9db300"/>
+        <circle cx="28" cy="-16" r="26" fill="#9db300"/>
+      </g></g>
+      <g transform="translate(420 440)">
+        <path d="M-3 0L0-120L3 0Z" fill="#263A58" opacity=".85"/>
+        <g transform="translate(0 -120)"><g class="aspas" stroke="#263A58" stroke-width="5" stroke-linecap="round">
+          <path d="M0 0V-62M0 0L54 31M0 0L-54 31"/><circle r="5" fill="#263A58"/>
+        </g></g>
+      </g>
+      <g transform="translate(520 470) scale(.65)">
+        <path d="M-3 0L0-120L3 0Z" fill="#263A58" opacity=".7"/>
+        <g transform="translate(0 -120)"><g class="aspas lento" stroke="#263A58" stroke-width="5" stroke-linecap="round" opacity=".8">
+          <path d="M0 0V-62M0 0L54 31M0 0L-54 31"/><circle r="5" fill="#263A58"/>
+        </g></g>
+      </g>
+
+      <g class="hoja h1"><use href="#hoja" fill="#B1C900" transform="scale(.6)"/></g>
+      <g class="hoja h2"><use href="#hoja" fill="#9db300" transform="scale(.45)"/></g>
+      <g class="hoja h3"><use href="#hoja" fill="#B1C900" transform="scale(.75)"/></g>
+      <g class="hoja h4"><use href="#hoja" fill="#15BECE" transform="scale(.4)"/></g>
+
+      <path class="gota" d="M0-16C10-2 14 4 14 10a14 14 0 0 1-28 0c0-6 4-12 14-26Z" fill="#22B2DE"/>
+
+      <g class="ola o3"><path d="M0 40Q75 0 150 40T300 40T450 40T600 40T750 40T900 40T1050 40T1200 40V400H0Z" fill="#15BECE" opacity=".35"/></g>
+      <g class="ola o2"><path d="M0 40Q75 0 150 40T300 40T450 40T600 40T750 40T900 40T1050 40T1200 40V400H0Z" fill="#22B2DE" opacity=".5"/></g>
+      <g class="ola o1"><path d="M0 40Q75 0 150 40T300 40T450 40T600 40T750 40T900 40T1050 40T1200 40V400H0Z" fill="#263A58" opacity=".92"/></g>
+
+      <g fill="none" stroke="#fff" stroke-width="2" opacity=".8">
+        <circle class="burb b1" cx="90" cy="790" r="7"/><circle class="burb b2" cx="210" cy="790" r="4"/>
+        <circle class="burb b3" cx="340" cy="790" r="9"/><circle class="burb b4" cx="470" cy="790" r="5"/>
+        <circle class="burb b5" cx="540" cy="790" r="6"/>
+      </g>
+    </svg>
+
+    <div class="escena-texto">
+      <p class="eyebrow">Gestión ambiental</p>
+      <p class="lema">Energía, agua y aseo,<br>bajo una misma mirada.</p>
+      <ul class="iconos-servicio">
+        <li><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>Energía</li>
+        <li><svg viewBox="0 0 24 24"><path d="M12 3C8 9 6 12 6 15a6 6 0 0 0 12 0c0-3-2-6-6-12z"/></svg>Agua</li>
+        <li><svg viewBox="0 0 24 24"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-14 14zM5 19c2-4 5-7 9-9"/></svg>Aseo</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="acceso">
+    <form id="form-login" class="login-caja" autocomplete="on">
+      <img class="logo" src="logo_poli.png" alt="Politécnico Grancolombiano">
+      <h1>Monitor de Consumos Ambientales</h1>
+      <p class="suave">Acceso restringido a usuarios autorizados.</p>
+      <label>Correo
+        <input id="correo" type="email" name="username" autocomplete="username" required>
+      </label>
+      <label>Contraseña
+        <input id="clave" type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <button id="entrar" type="submit">Ingresar</button>
+      <p id="msg-login" class="error" role="alert" hidden></p>
+      <p class="suave pequeno">Los datos están cifrados y se descifran en este navegador. Nada se envía a ningún servidor.</p>
+    </form>
+    <p class="legal">Vigilado MEN Resolución N. 19349 del 1980-11-04</p>
+  </section>
 </main>
 
 <div id="app" hidden>

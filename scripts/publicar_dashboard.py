@@ -10,7 +10,7 @@ contrasena son correctos. En el repositorio solo queda texto cifrado.
 Entrada : data/outputs/validacion_*.xlsx (+ monitor.db si existe)
 Correos  : config/accesos_dashboard.txt (un correo por linea; no se versiona)
 Claves   : data/outputs/accesos_dashboard.csv (se reutilizan; no se versiona)
-Salida   : site/  (index.html, app.js, descifrar.js, estilos.css, echarts.min.js, data.enc.json)
+Salida   : site/  (index.html, app.js, descifrar.js, estilos.css, logo_poli.png, echarts.min.js, data.enc.json)
 
 Limites: quitar a un usuario solo cierra el acceso a los datos publicados DESDE
 la siguiente corrida (la clave de datos se rota); las copias anteriores del
@@ -48,7 +48,7 @@ RUTA_CORREOS = os.path.join(BASE, "config", "accesos_dashboard.txt")
 RUTA_CLAVES = os.path.join(SALIDAS, "accesos_dashboard.csv")
 ITERACIONES = 600_000
 AAD_DATOS = b"monitor-consumos-v1"
-ARCHIVOS_SITIO = ["index.html", "app.js", "descifrar.js", "estilos.css"]
+ARCHIVOS_SITIO = ["index.html", "app.js", "descifrar.js", "estilos.css", "logo_poli.png"]
 VENDOR = ["echarts.min.js"]  # src/dashboard_estatico/vendor; se sirve desde el sitio, sin CDN
 
 
