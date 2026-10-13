@@ -8,7 +8,7 @@ Cada archivo vive en la carpeta de su etapa, segun el prefijo de su nombre:
   03_validacion/   validacion_*                     (estado, severidad, confianza)
   04_alertas/      alertas_*                        (atipicos y faltantes)
   05_oficial/      base_oficial_*, monitor.db       (solo lo confirmado)
-  catalogos/       catalogo_sedes.csv, inventario_pdfs.csv
+  catalogos/       catalogo_sedes.csv, sedes_por_contrato.csv, inventario_pdfs.csv
   control/         auditoria.csv, medicion_automatizacion.csv, accesos_dashboard.csv
   _historico/<etapa>/  versiones anteriores de cada etapa (no se borran)
   _legado/         salidas del diseno original (Energia_*, Acueducto_*, facturas_*)
@@ -35,6 +35,7 @@ CARPETAS = [
     ("alertas_", "04_alertas"),
     ("monitor.db", "05_oficial"),
     ("catalogo_sedes", "catalogos"),
+    ("sedes_por_contrato", "catalogos"),
     ("inventario_pdfs", "catalogos"),
     ("auditoria", "control"),
     ("medicion_automatizacion", "control"),

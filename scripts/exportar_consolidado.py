@@ -19,6 +19,7 @@ from openpyxl.utils import get_column_letter
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE)
 from src.utils import rutas  # noqa: E402
+from src.utils.sedes import completar_sede_por_cuenta  # noqa: E402
 
 AZUL, CIAN, CLARO = "263A58", "22B2DE", "EAF6FB"
 ESTADOS = {
@@ -56,6 +57,7 @@ def preparar(base: pd.DataFrame) -> pd.DataFrame:
     direccion = (base["direccion"].astype(str)
                  .str.replace(r"\s*\|\s*\d+$", "", regex=True).str.strip())
     base["sede_final"] = direccion.map(mapa_sedes()).fillna("Sin sede identificada")
+    base = completar_sede_por_cuenta(base, "Sin sede identificada")
     base["servicio"] = base["servicio"].astype(str).str.replace("^energia$", "Energía", regex=True) \
         .str.capitalize().str.replace("^Energ[ií]a$", "Energía", regex=True)
     base["unidad"] = base["unidad"].replace({"m3": "m³"})

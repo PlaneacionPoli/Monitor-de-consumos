@@ -39,6 +39,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE)
 from src.utils import rutas  # noqa: E402
+from src.utils.sedes import completar_sede_por_cuenta  # noqa: E402
 from src.processor.faltantes import detectar_faltantes  # noqa: E402
 from src.storage.repositorio import clave_registro  # noqa: E402
 
@@ -125,6 +126,7 @@ def construir_datos() -> dict:
     direccion = (base["direccion"].astype(str)
                  .str.replace(r"\s*\|\s*\d+$", "", regex=True).str.strip())
     base["sede_final"] = direccion.map(sedes).fillna("SIN_MAPEO")
+    base = completar_sede_por_cuenta(base, "SIN_MAPEO")
 
     def limpio(v):
         if v is None or (not isinstance(v, str) and pd.isna(v)):
