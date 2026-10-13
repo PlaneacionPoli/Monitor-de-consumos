@@ -8,11 +8,14 @@ Uso: python scripts/catalogo_sedes.py
 """
 import glob
 import os
+import sys
 import re
 
 import pandas as pd
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+from src.utils import rutas  # noqa: E402
 SALIDAS = os.path.join(BASE, "data", "outputs")
 
 REGLAS = [
@@ -67,7 +70,7 @@ def sugerir(prestador, direccion, sede_carpeta):
 
 
 def main():
-    ruta = sorted(glob.glob(os.path.join(SALIDAS, "base_unificada_*.xlsx")))[-1]
+    ruta = rutas.todos("base_unificada_*.xlsx")[-1]
     base = pd.read_excel(ruta, sheet_name="Base")
     base["direccion_norm"] = (base["direccion"].astype(str)
                               .str.replace(r"\s*\|\s*\d+$", "", regex=True)
@@ -79,7 +82,7 @@ def main():
     cat["sede_sugerida"] = [sugerir(p, d, s) for p, d, s in
                             zip(cat["prestador"], cat["direccion_norm"], cat["sede_carpeta"])]
     cat["sede_confirmada"] = ""
-    salida = os.path.join(SALIDAS, "catalogo_sedes.csv")
+    salida = rutas.ruta("catalogo_sedes.csv")
     cat.to_csv(salida, index=False)
     print(f"Direcciones: {len(cat)}")
     print(cat["sede_sugerida"].value_counts().to_string())

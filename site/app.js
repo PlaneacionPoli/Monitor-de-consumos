@@ -48,6 +48,67 @@
   const sumar = (filas, campo) => filas.reduce((a, f) => a + (Number(f[campo]) || 0), 0);
   const contar = (filas, campo) => filas.reduce((m, f) => { m[f[campo]] = (m[f[campo]] || 0) + 1; return m; }, {});
 
+
+  // ---------- iconos (lineales, un solo color: heredan currentColor) ----------
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const ICONOS = {
+    energia: "M13 2 4 14h6l-1 8 9-12h-6z",
+    agua: "M12 3C8 9 6 12 6 15a6 6 0 0 0 12 0c0-3-2-6-6-12z",
+    aseo: "M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3",
+    valor: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM14.5 9.5C14 8.5 13 8 12 8c-1.4 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1.1 2-2.5 2c-1 0-2-.5-2.5-1.5M12 6v2M12 16v2",
+    revision: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM8 12.5l2.8 2.8L16 9.5",
+    alerta: "M12 3 2 20h20L12 3zM12 10v4M12 17v.5",
+    edificio: "M4 21V5l8-2 8 2v16M9 21v-4h6v4M8 9h2M14 9h2M8 13h2M14 13h2",
+    campus: "M3 10 12 5l9 5M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18",
+    enchufe: "M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0V8zM12 17v4",
+    calendario: "M5 5h14v15H5zM5 10h14M9 3v4M15 3v4",
+    buscar: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4",
+    flecha: "M6 9l6 6 6-6",
+    x: "M6 6l12 12M18 6 6 18",
+    descarga: "M12 4v11M7 11l5 5 5-5M5 20h14",
+    archivo: "M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6",
+    escudo: "M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3zM9 12l2 2 4-4",
+    hoja: "M5 19c0-8 5-13 14-14 0 9-5 14-14 14zM5 19c2-4 5-7 9-9",
+    filtro: "M4 5h16l-6 8v6l-4-2v-4L4 5z",
+    reloj: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2",
+    gauge: "M4 18a9 9 0 1 1 16 0M12 18l4-6",
+    lista: "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01",
+    salir: "M10 4H5v16h5M14 8l4 4-4 4M18 12H9",
+    semaforo: "M8 3h8v18H8zM12 7h.01M12 12h.01M12 17h.01",
+    todos: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
+    pin: "M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11zM12 7.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z",
+    tendencia: "M4 17l5-5 4 4 7-8M15 8h5v5",
+  };
+  function icono(nombre) {
+    const sv = document.createElementNS(SVGNS, "svg");
+    sv.setAttribute("viewBox", "0 0 24 24");
+    sv.setAttribute("class", "ico");
+    sv.setAttribute("aria-hidden", "true");
+    const p = document.createElementNS(SVGNS, "path");
+    p.setAttribute("d", ICONOS[nombre] || ICONOS.archivo);
+    sv.appendChild(p);
+    return sv;
+  }
+  function hidratarIconos(raiz) {
+    (raiz || document).querySelectorAll("[data-icono]").forEach((n) => {
+      if (n.dataset.hecho) return;
+      n.dataset.hecho = "1";
+      n.insertBefore(icono(n.dataset.icono), n.firstChild);
+    });
+  }
+  const etiquetaServicio = (v) => {
+    const t = String(v || "");
+    return t.toLowerCase() === "energia" ? "Energía" : t.charAt(0).toUpperCase() + t.slice(1);
+  };
+  const etiquetaUnidad = (u) => (u === "m3" ? "m³" : u || "");
+  function iconoServicio(sv) {
+    const t = String(sv || "").toLowerCase();
+    if (t.includes("energ")) return "energia";
+    if (t.includes("acued") || t.includes("agua")) return "agua";
+    if (t.includes("aseo")) return "aseo";
+    return "archivo";
+  }
+
   // ---------- login ----------
   async function ingresar(evento) {
     evento.preventDefault();
@@ -84,6 +145,12 @@
   }
 
   // ---------- filtros ----------
+  const GRUPO_CSU = "CSU";               // los CSU se muestran como una sola sede desplegable
+  const esCsu = (s) => /^CSU\b/.test(s || "");
+  const etiquetaSede = (v) => (v === GRUPO_CSU ? "CSU · todos los centros" : v === "SIN_MAPEO" ? "Sin sede identificada" : v);
+  const abierto = { rank: false, sem: false };   // CSU desplegado en ranking / semaforo
+  const resetPag = () => { pag.cola = 0; pag.facturas = 0; };
+
   function llenar(id, valores, etiquetas) {
     const s = $(id), previo = s.value;
     vaciar(s);
@@ -98,7 +165,7 @@
 
   function pasa(r, sinTiempo) {
     return (F.servicio === TODOS || r.servicio === F.servicio) &&
-      (F.sede === TODOS || r.sede === F.sede) &&
+      (F.sede === TODOS || r.sede === F.sede || (F.sede === GRUPO_CSU && esCsu(r.sede))) &&
       (F.prestador === TODOS || r.prestador === F.prestador) &&
       (F.estado === TODOS || r.estado === F.estado) &&
       (sinTiempo || ((F.desde === TODOS || (r.ymes && r.ymes >= F.desde)) &&
@@ -106,10 +173,17 @@
   }
   const filtradas = (sinTiempo) => datos.facturas.filter((r) => pasa(r, sinTiempo));
 
+  // Conteo de facturas por valor de `campo` aplicando todos los filtros menos el de `clave`.
+  function conteo(clave, campo) {
+    const previo = F[clave];
+    F[clave] = TODOS;
+    const m = {};
+    datos.facturas.forEach((r) => { if (pasa(r)) m[r[campo]] = (m[r[campo]] || 0) + 1; });
+    F[clave] = previo;
+    return m;
+  }
+
   function sincronizarSelects() {
-    $("f-servicio").value = F.servicio;
-    $("f-sede").value = F.sede;
-    $("f-prestador").value = F.prestador;
     $("f-desde").value = F.desde;
     $("f-hasta").value = F.hasta;
   }
@@ -117,9 +191,159 @@
   function fijar(clave, valor) {
     // Un segundo clic sobre el mismo valor lo quita (alternar).
     F[clave] = F[clave] === valor ? TODOS : valor;
-    pag.cola = 0; pag.facturas = 0;
-    sincronizarSelects();
+    resetPag();
     renderizar();
+  }
+
+  function pildorasServicio() {
+    const caja = $("f-servicio");
+    vaciar(caja);
+    const cnt = conteo("servicio", "servicio");
+    [TODOS, ...unicos("servicio")].forEach((v) => {
+      const b = el("button", null, "pildora");
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(F.servicio === v));
+      b.appendChild(icono(v === TODOS ? "todos" : iconoServicio(v)));
+      b.appendChild(el("span", v === TODOS ? "Todos" : etiquetaServicio(v)));
+      if (v !== TODOS) b.appendChild(el("small", fmt.format(cnt[v] || 0)));
+      b.addEventListener("click", () => { F.servicio = v; resetPag(); renderizar(); });
+      caja.appendChild(b);
+    });
+  }
+
+  function pildorasRapidos() {
+    const caja = $("f-rapidos");
+    vaciar(caja);
+    const meses = unicos("ymes");
+    [["Todo", 0], ["3 meses", 3], ["6 meses", 6], ["12 meses", 12]].forEach(([t, n]) => {
+      if (n && meses.length < n) return;
+      const desde = n ? meses[meses.length - n] : TODOS;
+      const b = el("button", t, "pildora chica");
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(F.desde === desde && F.hasta === TODOS));
+      b.addEventListener("click", () => { F.desde = desde; F.hasta = TODOS; resetPag(); renderizar(); });
+      caja.appendChild(b);
+    });
+  }
+
+  // ---- combo con busqueda (sede con CSU desplegable, prestador) ----
+  const combos = {};
+  function crearCombo(contId, cfg) {
+    const caja = $(contId);
+    let abiertoC = false, q = "";
+    const grupos = new Set();
+    const btn = el("button", null, "combo-btn");
+    btn.type = "button";
+    btn.setAttribute("aria-haspopup", "listbox");
+    btn.setAttribute("aria-expanded", "false");
+    btn.appendChild(icono(cfg.icono));
+    const txt = el("span", null, "combo-txt");
+    txt.appendChild(el("small", cfg.titulo));
+    const valor = el("strong");
+    txt.appendChild(valor);
+    btn.appendChild(txt);
+    btn.appendChild(icono("flecha"));
+    const panel = el("div", null, "combo-panel");
+    panel.hidden = true;
+    const buscador = el("label", null, "combo-buscar");
+    buscador.appendChild(icono("buscar"));
+    const entrada = el("input");
+    entrada.type = "search";
+    entrada.placeholder = `Buscar ${cfg.titulo.toLowerCase()}…`;
+    entrada.setAttribute("aria-label", `Buscar ${cfg.titulo.toLowerCase()}`);
+    buscador.appendChild(entrada);
+    const lista = el("div", null, "combo-lista");
+    lista.setAttribute("role", "listbox");
+    panel.appendChild(buscador);
+    panel.appendChild(lista);
+    caja.appendChild(btn);
+    caja.appendChild(panel);
+
+    function opcion(o, hijo) {
+      const b = el("button", null, "combo-op" + (hijo ? " hijo" : ""));
+      b.type = "button";
+      b.setAttribute("role", "option");
+      b.setAttribute("aria-selected", String(F[cfg.clave] === o.v));
+      if (o.icono) b.appendChild(icono(o.icono));
+      b.appendChild(el("span", o.t, "op-t"));
+      b.appendChild(el("small", fmt.format(o.n || 0)));
+      if (!o.n && o.v !== TODOS) b.classList.add("sin");
+      b.addEventListener("click", () => { F[cfg.clave] = o.v; resetPag(); cerrar(); renderizar(); });
+      return b;
+    }
+    function dibujar() {
+      vaciar(lista);
+      const ql = q.trim().toLowerCase();
+      const coincide = (o) => !ql || o.t.toLowerCase().includes(ql);
+      lista.appendChild(opcion({ v: TODOS, t: cfg.todos, n: cfg.total() }));
+      cfg.opciones().forEach((o) => {
+        if (!o.hijos) { if (coincide(o)) lista.appendChild(opcion(o)); return; }
+        const hijos = o.hijos.filter(coincide);
+        if (!coincide(o) && !hijos.length) return;
+        const fila = el("div", null, "combo-grupo");
+        fila.appendChild(opcion(o));
+        const ab = grupos.has(o.v) || !!ql;
+        const t = el("button", null, "combo-chev" + (ab ? " abierto" : ""));
+        t.type = "button";
+        t.setAttribute("aria-label", ab ? "Plegar" : "Desplegar");
+        t.setAttribute("aria-expanded", String(ab));
+        t.appendChild(icono("flecha"));
+        t.addEventListener("click", () => { if (grupos.has(o.v)) grupos.delete(o.v); else grupos.add(o.v); dibujar(); });
+        fila.appendChild(t);
+        lista.appendChild(fila);
+        if (ab) (coincide(o) ? o.hijos : hijos).forEach((h) => lista.appendChild(opcion(h, true)));
+      });
+      if (lista.childNodes.length === 1) lista.appendChild(el("p", "Sin coincidencias.", "vacio"));
+    }
+    function abrir() {
+      abiertoC = true; panel.hidden = false; btn.setAttribute("aria-expanded", "true");
+      q = ""; entrada.value = ""; dibujar(); entrada.focus();
+    }
+    function cerrar() { abiertoC = false; panel.hidden = true; btn.setAttribute("aria-expanded", "false"); }
+    btn.addEventListener("click", () => (abiertoC ? cerrar() : abrir()));
+    entrada.addEventListener("input", () => { q = entrada.value; dibujar(); });
+    caja.addEventListener("keydown", (e) => { if (e.key === "Escape") { cerrar(); btn.focus(); } });
+    combos[contId] = {
+      caja, cerrar,
+      refrescar() {
+        const v = F[cfg.clave];
+        valor.textContent = v === TODOS ? cfg.todos : (cfg.etiqueta ? cfg.etiqueta(v) : v);
+        btn.classList.toggle("activo", v !== TODOS);
+        if (abiertoC) dibujar();
+      },
+    };
+  }
+
+  function crearCombos() {
+    if (combos["c-sede"]) return;
+    crearCombo("c-sede", {
+      clave: "sede", titulo: "Sede", icono: "edificio", todos: "Todas las sedes", etiqueta: etiquetaSede,
+      total: () => Object.values(conteo("sede", "sede")).reduce((a, b) => a + b, 0),
+      opciones: () => {
+        const cnt = conteo("sede", "sede");
+        const todas = unicos("sede");
+        const csu = todas.filter(esCsu).map((v) => ({ v, t: v, n: cnt[v] || 0, icono: "pin" }));
+        const otras = todas.filter((s) => !esCsu(s)).map((v) => ({ v, t: etiquetaSede(v), n: cnt[v] || 0, icono: "edificio" }));
+        const grupo = csu.length ? [{ v: GRUPO_CSU, t: `CSU · todos los centros (${csu.length})`, icono: "campus",
+          n: csu.reduce((a, c) => a + c.n, 0), hijos: csu }] : [];
+        return [...grupo, ...otras];
+      },
+    });
+    crearCombo("c-prestador", {
+      clave: "prestador", titulo: "Prestador", icono: "enchufe", todos: "Todos los prestadores",
+      total: () => Object.values(conteo("prestador", "prestador")).reduce((a, b) => a + b, 0),
+      opciones: () => {
+        const cnt = conteo("prestador", "prestador");
+        return unicos("prestador").map((v) => ({ v, t: v, n: cnt[v] || 0, icono: "enchufe" }));
+      },
+    });
+  }
+
+  function filtrosUI() {
+    pildorasServicio();
+    pildorasRapidos();
+    sincronizarSelects();
+    Object.values(combos).forEach((c) => c.refrescar());
   }
 
   function chips() {
@@ -132,11 +356,13 @@
       if (F[k] === TODOS) return;
       activos += 1;
       const c = el("span", null, "chip");
-      c.appendChild(el("span", `${etiquetas[k]}: ${k === "estado" ? etiquetaEstado(F[k]) : F[k]}`));
-      const x = el("button", "×");
+      const valor = k === "estado" ? etiquetaEstado(F[k]) : k === "sede" ? etiquetaSede(F[k]) : k === "servicio" ? etiquetaServicio(F[k]) : F[k];
+      c.appendChild(el("span", `${etiquetas[k]}: ${valor}`));
+      const x = el("button", null, "chip-x");
       x.type = "button";
       x.setAttribute("aria-label", `Quitar filtro ${etiquetas[k]}`);
-      x.addEventListener("click", () => { F[k] = TODOS; sincronizarSelects(); renderizar(); });
+      x.appendChild(icono("x"));
+      x.addEventListener("click", () => { F[k] = TODOS; resetPag(); renderizar(); });
       c.appendChild(x);
       caja.appendChild(c);
     });
@@ -148,16 +374,15 @@
       `Datos generados el ${datos.generado} · fuente ${datos.fuente} · ${datos.facturas.length} filas`;
     Object.keys(F).forEach((k) => { F[k] = TODOS; });
     hallazgo = TODOS;
-    pag.cola = 0; pag.facturas = 0;
-    llenar("f-servicio", unicos("servicio"));
-    llenar("f-sede", unicos("sede"));
-    llenar("f-prestador", unicos("prestador"));
+    resetPag();
+    abierto.rank = false; abierto.sem = false;
     const meses = unicos("ymes");
     llenar("f-desde", meses);
     llenar("f-hasta", meses);
     llenar("f-hallazgo", ["ALTA", "MEDIA", "SIN_SERIE", "REVISION_BAJA_CONFIANZA",
       "REVISION_PERIODO_INFERIDO", "REVISION_UNIDAD"], (v) =>
       v === "ALTA" ? "Atípico · severidad alta" : v === "MEDIA" ? "Atípico · severidad media" : etiquetaEstado(v));
+    crearCombos();
     renderizar();
   }
 
@@ -165,6 +390,7 @@
   function renderizar() {
     if (!datos) return;
     chips();
+    filtrosUI();
     if (vista === "ejecutiva") ejecutiva(); else operativa();
   }
 
@@ -173,7 +399,7 @@
     const filas = filtradas(false);
     aviso();
     kpisEjecutivos(filas);
-    graficoMensual("g-energia", "kWh", css("--acento"));
+    graficoMensual("g-energia", "kWh", css("--energia"));
     graficoMensual("g-agua", "m3", css("--agua"));
     graficoSedes(filas);
     calidad(filas);
@@ -194,8 +420,9 @@
     }
   }
 
-  function kpiCaja(titulo, valor, sub, clase, unidad) {
+  function kpiCaja(titulo, valor, sub, clase, unidad, ic) {
     const k = el("div", null, "kpi" + (clase ? " " + clase : ""));
+    if (ic) { const c = el("span", null, "kpi-ico"); c.appendChild(icono(ic)); k.appendChild(c); }
     k.appendChild(el("div", titulo, "suave pequeno"));
     const v = el("div", valor, "valor");
     if (unidad) v.appendChild(el("span", " " + unidad, "unidad"));
@@ -212,13 +439,13 @@
     const pct = total ? ok / total : 0;
     const altas = filas.filter((r) => r.severidad === "ALTA" && r.estado === "ATIPICO_REVISAR").length;
     const falt = datos.faltantes.filter((x) => F.servicio === TODOS || x.servicio === F.servicio).length;
-    caja.appendChild(kpiCaja("Energía", fmt.format(sumar(filas.filter((r) => r.unidad === "kWh"), "consumo")), `${fmt.format(filas.filter((r) => r.unidad === "kWh").length)} facturas`, "", "kWh"));
-    caja.appendChild(kpiCaja("Agua", fmt.format(sumar(filas.filter((r) => r.unidad === "m3"), "consumo")), `${fmt.format(filas.filter((r) => r.unidad === "m3").length)} facturas`, "", "m³"));
-    caja.appendChild(kpiCaja("Valor facturado", fmtMoneda.format(sumar(filas, "valor")), `${fmt.format(total)} facturas`));
+    caja.appendChild(kpiCaja("Energía", fmt.format(sumar(filas.filter((r) => r.unidad === "kWh"), "consumo")), `${fmt.format(filas.filter((r) => r.unidad === "kWh").length)} facturas`, "k-energia", "kWh", "energia"));
+    caja.appendChild(kpiCaja("Agua", fmt.format(sumar(filas.filter((r) => r.unidad === "m3"), "consumo")), `${fmt.format(filas.filter((r) => r.unidad === "m3").length)} facturas`, "k-agua", "m³", "agua"));
+    caja.appendChild(kpiCaja("Valor facturado", fmtMoneda.format(sumar(filas, "valor")), `${fmt.format(total)} facturas`, "k-valor", "", "valor"));
 
     const auto = kpiCaja("Facturas sin revisión manual", fmtPct(pct),
       `Meta ${fmtPct(META_AUTOMATIZACION)} · mínimo ${fmtPct(MINIMO_AUTOMATIZACION)}`,
-      pct < MINIMO_AUTOMATIZACION && total ? "alerta" : "");
+      pct < MINIMO_AUTOMATIZACION && total ? "alerta" : "k-ok", "", "revision");
     const barra = el("div", null, "barra-prog");
     const relleno = el("span");
     relleno.style.width = `${Math.min(100, pct * 100)}%`;
@@ -231,8 +458,8 @@
     auto.insertBefore(barra, auto.querySelector(".sub"));
     caja.appendChild(auto);
 
-    caja.appendChild(kpiCaja("Atípicos severidad alta", fmt.format(altas), "por revisar", altas ? "alerta" : ""));
-    caja.appendChild(kpiCaja("Posibles faltantes", fmt.format(falt), "facturas esperadas", falt ? "alerta" : ""));
+    caja.appendChild(kpiCaja("Atípicos severidad alta", fmt.format(altas), "por revisar", altas ? "alerta" : "", "", "alerta"));
+    caja.appendChild(kpiCaja("Posibles faltantes", fmt.format(falt), "facturas esperadas", falt ? "alerta" : "", "", "reloj"));
   }
 
   // ---------- graficos (Apache ECharts, servido desde el propio sitio) ----------
@@ -325,42 +552,84 @@
     renderizar();
   }
 
-  // Ranking de sedes en HTML: cada fila es un boton que filtra por esa sede.
+  // Ranking de sedes en HTML: los CSU se muestran como una sola sede que se despliega.
+  function filaRank(c) {
+    const fila = el("button", null, "rank-fila" + (c.hijo ? " hijo" : ""));
+    fila.type = "button";
+    fila.setAttribute("aria-pressed", String(c.activo));
+    fila.title = `${c.nombre}: ${fmt.format(c.valor)} ${c.unidad} (${fmtPct(c.valor / c.total)})`;
+    fila.appendChild(el("span", c.hijo ? "" : c.indice, "rank-n"));
+    const cuerpo = el("span", null, "rank-cuerpo");
+    const nom = el("span", null, "rank-nombre");
+    nom.appendChild(icono(c.ico));
+    nom.appendChild(el("span", c.nombre));
+    cuerpo.appendChild(nom);
+    const pista = el("span", null, "rank-pista");
+    const barra = el("span", null, c.unidad === "m³" ? "rank-barra agua" : "rank-barra");
+    barra.style.width = `${Math.max(2, (c.valor / c.max) * 100)}%`;
+    pista.appendChild(barra);
+    cuerpo.appendChild(pista);
+    fila.appendChild(cuerpo);
+    const num = el("span", null, "rank-valor");
+    num.appendChild(el("strong", fmt.format(c.valor)));
+    num.appendChild(el("small", fmtPct(c.valor / c.total)));
+    fila.appendChild(num);
+    if (c.alClic) fila.addEventListener("click", c.alClic); else fila.disabled = true;
+    return fila;
+  }
+
   function graficoSedes(filas) {
     const unidad = unidadSede === "kWh" ? "kWh" : "m³";
-    $("t-sede").textContent = `Sedes con mayor consumo (${unidad})`;
+    $("t-sede").lastChild.textContent = `Sedes con mayor consumo (${unidad})`;
     const por = {};
     filas.filter((r) => r.unidad === unidadSede).forEach((r) => {
       por[r.sede] = (por[r.sede] || 0) + (Number(r.consumo) || 0);
     });
-    const items = Object.entries(por).sort((a, b) => b[1] - a[1]);
-    const total = items.reduce((a, i) => a + i[1], 0) || 1;
-    const max = items.length ? items[0][1] : 1;
+    const entradas = [], hijos = [];
+    let totalCsu = 0;
+    Object.entries(por).forEach(([sede, valor]) => {
+      if (esCsu(sede)) { totalCsu += valor; hijos.push({ sede, valor }); } else entradas.push({ sede, valor });
+    });
+    const desc = (a, b) => b.valor - a.valor;
+    hijos.sort(desc);
+    if (hijos.length) entradas.push({ sede: GRUPO_CSU, valor: totalCsu, hijos });
+    entradas.sort(desc);
+    const total = entradas.reduce((a, e) => a + e.valor, 0) || 1;
+    const max = entradas.length ? entradas[0].valor : 1;
     const caja = $("g-sede");
     vaciar(caja);
-    if (!items.length) { caja.appendChild(el("p", "Sin datos para los filtros elegidos.", "vacio")); return; }
+    if (!entradas.length) { caja.appendChild(el("p", "Sin datos para los filtros elegidos.", "vacio")); return; }
     const lista = el("div", null, "ranking");
-    items.slice(0, 12).forEach(([sede, valor], i) => {
-      const fila = el("button", null, "rank-fila");
-      fila.type = "button";
-      fila.setAttribute("aria-pressed", String(F.sede === sede));
-      fila.title = `${sede}: ${fmt.format(valor)} ${unidad} (${fmtPct(valor / total)})`;
-      fila.appendChild(el("span", i + 1, "rank-n"));
-      const cuerpo = el("span", null, "rank-cuerpo");
-      cuerpo.appendChild(el("span", sede, "rank-nombre"));
-      const pista = el("span", null, "rank-pista");
-      const barra = el("span", null, unidadSede === "m3" ? "rank-barra agua" : "rank-barra");
-      barra.style.width = `${Math.max(2, (valor / max) * 100)}%`;
-      pista.appendChild(barra);
-      cuerpo.appendChild(pista);
-      fila.appendChild(cuerpo);
-      const num = el("span", null, "rank-valor");
-      num.appendChild(el("strong", fmt.format(valor)));
-      num.appendChild(el("small", fmtPct(valor / total)));
-      fila.appendChild(num);
-      if (sede !== "SIN_MAPEO") fila.addEventListener("click", () => fijar("sede", sede));
-      else fila.disabled = true;
-      lista.appendChild(fila);
+    entradas.slice(0, 12).forEach((e, i) => {
+      const esGrupo = !!e.hijos;
+      const sinMapeo = e.sede === "SIN_MAPEO";
+      const fila = filaRank({
+        indice: i + 1, nombre: esGrupo ? `CSU · ${e.hijos.length} centros` : etiquetaSede(e.sede), valor: e.valor,
+        max, total, unidad, ico: esGrupo ? "campus" : "edificio", activo: F.sede === e.sede,
+        alClic: sinMapeo ? null : () => fijar("sede", e.sede),
+      });
+      if (!esGrupo) { lista.appendChild(fila); return; }
+      const grupo = el("div", null, "rank-grupo");
+      const cab = el("div", null, "rank-cab");
+      cab.appendChild(fila);
+      const t = el("button", null, "chev" + (abierto.rank ? " abierto" : ""));
+      t.type = "button";
+      t.setAttribute("aria-expanded", String(abierto.rank));
+      t.setAttribute("aria-label", abierto.rank ? "Plegar CSU" : "Desplegar CSU");
+      t.appendChild(icono("flecha"));
+      t.addEventListener("click", () => { abierto.rank = !abierto.rank; renderizar(); });
+      cab.appendChild(t);
+      grupo.appendChild(cab);
+      if (abierto.rank) {
+        const sub = el("div", null, "rank-hijos");
+        const maxH = e.hijos[0].valor || 1;
+        e.hijos.forEach((h) => sub.appendChild(filaRank({
+          hijo: true, nombre: h.sede, valor: h.valor, max: maxH, total: e.valor || 1, unidad, ico: "pin",
+          activo: F.sede === h.sede, alClic: () => fijar("sede", h.sede),
+        })));
+        grupo.appendChild(sub);
+      }
+      lista.appendChild(grupo);
     });
     caja.appendChild(lista);
   }
@@ -405,31 +674,43 @@
     caja.appendChild(leyenda);
   }
 
-  // Semaforo por sede: una tarjeta por sede, ordenadas por criticidad.
+  // Semaforo por sede: una tarjeta por sede (los CSU, juntos y desplegables), ordenadas por criticidad.
   function semaforo(filas) {
-    const por = {};
-    filas.forEach((r) => {
-      const s = (por[r.sede] = por[r.sede] || { n: 0, ok: 0, atip: 0, alta: 0, kwh: 0, m3: 0 });
+    const nueva = () => ({ n: 0, ok: 0, atip: 0, alta: 0, kwh: 0, m3: 0 });
+    const sumarEn = (s, r) => {
       s.n += 1;
       if (r.estado === "OK") s.ok += 1;
       if (r.estado === "ATIPICO_REVISAR") { s.atip += 1; if (r.severidad === "ALTA") s.alta += 1; }
       if (r.unidad === "kWh") s.kwh += Number(r.consumo) || 0;
       if (r.unidad === "m3") s.m3 += Number(r.consumo) || 0;
+    };
+    const por = {}, csu = nueva();
+    filas.forEach((r) => {
+      sumarEn((por[r.sede] = por[r.sede] || nueva()), r);
+      if (esCsu(r.sede)) sumarEn(csu, r);
     });
     const rango = { Crítico: 0, Atención: 1, Normal: 2 };
     const nivel = (s) => (s.alta >= 3 ? "Crítico" : (s.atip > 0 || s.ok / s.n < 0.6 ? "Atención" : "Normal"));
-    const lista = Object.entries(por).map(([sede, s]) => ({ sede, ...s, nivel: nivel(s) }))
-      .sort((a, b) => rango[a.nivel] - rango[b.nivel] || b.alta - a.alta || b.n - a.n);
+    const ordenar = (a, b) => rango[a.nivel] - rango[b.nivel] || b.alta - a.alta || b.n - a.n;
+    const centros = Object.entries(por).filter(([sede]) => esCsu(sede))
+      .map(([sede, s]) => ({ sede, ...s, nivel: nivel(s) })).sort(ordenar);
+    const lista = Object.entries(por).filter(([sede]) => !esCsu(sede))
+      .map(([sede, s]) => ({ sede, ...s, nivel: nivel(s) }));
+    if (centros.length) lista.push({ sede: GRUPO_CSU, ...csu, nivel: nivel(csu), hijos: centros });
+    lista.sort(ordenar);
     const caja = $("t-semaforo");
     vaciar(caja);
     if (!lista.length) { caja.appendChild(el("p", "Sin datos para los filtros elegidos.", "vacio")); return; }
-    const rejilla = el("div", null, "tiles");
-    lista.forEach((r) => {
-      const t = el("button", null, "tile " + r.nivel);
+
+    function tarjeta(r, ico, nombre, ancha) {
+      const t = el("button", null, "tile " + r.nivel + (ancha ? " ancha" : ""));
       t.type = "button";
       t.setAttribute("aria-pressed", String(F.sede === r.sede));
       t.appendChild(el("span", r.nivel, "sem " + r.nivel));
-      t.appendChild(el("span", r.sede, "tile-nombre"));
+      const nom = el("span", null, "tile-nombre");
+      nom.appendChild(icono(ico));
+      nom.appendChild(el("span", nombre));
+      t.appendChild(nom);
       const datosT = el("span", null, "tile-datos");
       [["Facturas", fmt.format(r.n)], ["kWh", fmt.format(r.kwh)], ["m³", fmt.format(r.m3)],
         ["Atípicos", r.atip ? `${r.atip}${r.alta ? ` (${r.alta} altos)` : ""}` : "0"]].forEach(([k, v]) => {
@@ -446,7 +727,30 @@
       t.appendChild(el("small", `${fmtPct(r.ok / r.n)} sin hallazgos`, "suave"));
       if (r.sede !== "SIN_MAPEO") t.addEventListener("click", () => fijar("sede", r.sede));
       else t.disabled = true;
-      rejilla.appendChild(t);
+      return t;
+    }
+
+    const rejilla = el("div", null, "tiles");
+    lista.forEach((r) => {
+      if (!r.hijos) {
+        rejilla.appendChild(tarjeta(r, "edificio", etiquetaSede(r.sede)));
+        return;
+      }
+      const envoltura = el("div", null, "tile-wrap" + (abierto.sem ? " abierto" : ""));
+      envoltura.appendChild(tarjeta(r, "campus", `CSU · ${r.hijos.length} centros`, abierto.sem));
+      const t = el("button", null, "chev tile-chev" + (abierto.sem ? " abierto" : ""));
+      t.type = "button";
+      t.setAttribute("aria-expanded", String(abierto.sem));
+      t.setAttribute("aria-label", abierto.sem ? "Plegar CSU" : "Desplegar CSU");
+      t.appendChild(icono("flecha"));
+      t.addEventListener("click", () => { abierto.sem = !abierto.sem; renderizar(); });
+      envoltura.appendChild(t);
+      if (abierto.sem) {
+        const sub = el("div", null, "tiles hijos");
+        r.hijos.forEach((h) => sub.appendChild(tarjeta(h, "pin", h.sede)));
+        envoltura.appendChild(sub);
+      }
+      rejilla.appendChild(envoltura);
     });
     caja.appendChild(rejilla);
   }
@@ -482,6 +786,9 @@
       const b = el("button", null, "kpi clic");
       b.type = "button";
       b.setAttribute("aria-pressed", String(hallazgo === clave));
+      const ic = el("span", null, "kpi-ico");
+      ic.appendChild(icono({ ALTA: "alerta", MEDIA: "alerta", SIN_SERIE: "gauge", REVISION_BAJA_CONFIANZA: "escudo" }[clave] || "revision"));
+      b.appendChild(ic);
       b.appendChild(el("div", titulo, "suave pequeno"));
       b.appendChild(el("div", fmt.format(n), "valor"));
       b.addEventListener("click", () => {
@@ -493,6 +800,9 @@
       caja.appendChild(b);
     });
     const f = el("div", null, "kpi");
+    const icF = el("span", null, "kpi-ico");
+    icF.appendChild(icono("reloj"));
+    f.appendChild(icF);
     f.appendChild(el("div", "Faltantes", "suave pequeno"));
     f.appendChild(el("div", fmt.format(datos.faltantes.length), "valor"));
     caja.appendChild(f);
@@ -630,20 +940,68 @@
     return t;
   }
 
-  // ---------- detalle ----------
+  // ---------- ficha de la factura ----------
   function abrirDetalle(r) {
-    const dl = $("detalle-lista");
-    vaciar(dl);
-    [["Factura", r.factura], ["Prestador", r.prestador], ["Servicio", r.servicio], ["Sede", r.sede],
-      ["Dirección", r.direccion], ["Cuenta / medidor", r.cuenta], ["Periodo", `${r.periodo_inicio || "?"} → ${r.periodo_fin || "?"}`],
-      ["Consumo", r.consumo === null ? "" : `${fmt.format(r.consumo)} ${r.unidad || ""}`],
-      ["Valor", r.valor === null ? "" : fmtMoneda.format(r.valor)],
-      ["Estado de validación", etiquetaEstado(r.estado)], ["Severidad", r.severidad], ["Detalle", r.detalle],
-      ["Confianza", r.confianza], ["Revisión", r.revision], ["Archivo origen", r.archivo],
-    ].forEach(([k, v]) => {
-      dl.appendChild(el("dt", k));
-      dl.appendChild(el("dd", v === null || v === undefined || v === "" ? "—" : v));
+    const est = ESTADOS[r.estado];
+    const ico = $("ficha-icono");
+    vaciar(ico);
+    ico.appendChild(icono(iconoServicio(r.servicio)));
+    $("detalle-titulo").textContent = !r.factura || /no identificado/i.test(r.factura) ? "Factura sin número identificado" : `Factura ${r.factura}`;
+    $("ficha-sub").textContent = [r.prestador, etiquetaServicio(r.servicio), etiquetaSede(r.sede)].filter(Boolean).join(" · ");
+    const insignia = $("ficha-estado");
+    insignia.textContent = esAtipico(r) && r.severidad ? `Atípico · ${String(r.severidad).toLowerCase()}` : etiquetaEstado(r.estado);
+    insignia.style.setProperty("--c", css(est ? est[1] : "--neutro"));
+
+    const cuerpo = $("ficha-cuerpo");
+    vaciar(cuerpo);
+    const vacioTxt = (v) => (v === null || v === undefined || v === "" ? "—" : v);
+    const stats = el("div", null, "ficha-stats");
+    [[`Consumo`, r.consumo === null ? "—" : `${fmt.format(r.consumo)} ${etiquetaUnidad(r.unidad)}`, iconoServicio(r.servicio)],
+      ["Valor facturado", r.valor === null ? "—" : fmtMoneda.format(r.valor), "valor"],
+      ["Periodo", `${r.periodo_inicio || "?"} → ${r.periodo_fin || "?"}`, "calendario"]].forEach(([t, v, ic]) => {
+      const c = el("div", null, "ficha-stat");
+      const i = el("span", null, "kpi-ico");
+      i.appendChild(icono(ic));
+      c.appendChild(i);
+      c.appendChild(el("small", t));
+      c.appendChild(el("strong", v));
+      stats.appendChild(c);
     });
+    cuerpo.appendChild(stats);
+
+    const conf = Number(r.confianza);
+    if (!Number.isNaN(conf) && r.confianza !== null && r.confianza !== "") {
+      const caja = el("div", null, "ficha-conf");
+      const cab = el("div", null, "ficha-conf-cab");
+      cab.appendChild(el("span", "Confianza de la extracción"));
+      cab.appendChild(el("strong", fmtPct(conf)));
+      caja.appendChild(cab);
+      const m = el("span", null, "mini ancho"), b = el("span");
+      b.style.width = `${Math.max(0, Math.min(100, conf * 100))}%`;
+      m.appendChild(b);
+      caja.appendChild(m);
+      cuerpo.appendChild(caja);
+    }
+
+    function seccion(titulo, ic, pares) {
+      const sec = el("section", null, "ficha-sec");
+      const h = el("h3", titulo);
+      h.insertBefore(icono(ic), h.firstChild);
+      sec.appendChild(h);
+      const dl = el("dl");
+      pares.forEach(([k, v]) => { dl.appendChild(el("dt", k)); dl.appendChild(el("dd", vacioTxt(v))); });
+      sec.appendChild(dl);
+      cuerpo.appendChild(sec);
+    }
+    seccion("Identificación", "archivo", [["Factura", r.factura], ["Prestador", r.prestador], ["Servicio", etiquetaServicio(r.servicio)],
+      ["Sede", etiquetaSede(r.sede)], ["Dirección", r.direccion], ["Cuenta / medidor", r.cuenta]]);
+    seccion("Validación", "escudo", [["Estado", etiquetaEstado(r.estado)], ["Severidad", r.severidad],
+      ["Detalle", r.detalle], ["Revisión", r.revision]]);
+
+    const pie = $("ficha-archivo");
+    vaciar(pie);
+    pie.appendChild(icono("archivo"));
+    pie.appendChild(document.createTextNode(` Archivo origen: ${vacioTxt(r.archivo)}`));
     if (!$("detalle").open) $("detalle").showModal();
   }
 
@@ -686,21 +1044,18 @@
   document.addEventListener("DOMContentLoaded", () => {
     $("form-login").addEventListener("submit", ingresar);
     $("salir").addEventListener("click", salir);
-    [["f-servicio", "servicio"], ["f-sede", "sede"], ["f-prestador", "prestador"],
-      ["f-desde", "desde"], ["f-hasta", "hasta"]].forEach(([id, clave]) =>
+    [["f-desde", "desde"], ["f-hasta", "hasta"]].forEach(([id, clave]) =>
       $(id).addEventListener("change", () => {
         F[clave] = $(id).value;
         // Rango coherente: si desde > hasta, se alinea el otro extremo.
         if (F.desde !== TODOS && F.hasta !== TODOS && F.desde > F.hasta) {
           if (clave === "desde") F.hasta = F.desde; else F.desde = F.hasta;
-          sincronizarSelects();
         }
-        pag.cola = 0; pag.facturas = 0;
+        resetPag();
         renderizar();
       }));
     $("limpiar").addEventListener("click", () => {
       Object.keys(F).forEach((k) => { F[k] = TODOS; });
-      sincronizarSelects();
       renderizar();
     });
     document.querySelectorAll(".segmento [data-vista]").forEach((b) =>
@@ -722,7 +1077,9 @@
     $("descargar").addEventListener("click", descargar);
     $("cerrar-detalle").addEventListener("click", () => $("detalle").close());
     window.addEventListener("resize", () => Object.values(instancias).forEach((c) => c.resize()));
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => renderizar());
+    document.addEventListener("click", (e) => Object.values(combos).forEach((c) => { if (!c.caja.contains(e.target)) c.cerrar(); }));
+    $("detalle").addEventListener("click", (e) => { if (e.target === $("detalle")) $("detalle").close(); });
+    hidratarIconos();
     $("correo").focus();
   });
 })();

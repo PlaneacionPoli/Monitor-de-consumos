@@ -68,7 +68,7 @@ Madurez: **prototipo / prueba funcional parcial** (nivel 2–3 de 8). No piloto,
 
 ### Fase 1 — Saneamiento y base (1–2 sem)
 - [x] Clasificación masiva digital vs. imagen: `scripts/clasificar_pdfs.py` →
-  `data/outputs/inventario_pdfs.csv` (2026-10-06: **803 PDF, 801 DIGITAL, 2 IMAGEN** —
+  `data/outputs/catalogos/inventario_pdfs.csv` (2026-10-06: **803 PDF, 801 DIGITAL, 2 IMAGEN** —
   ambas Enel City Campus DIC-2025 y FEB-2026, casos OCR reales dentro del alcance).
 - [x] Extractor Enel Bogotá (`src/extractor/prestadores_bogota.py:extraer_enel`):
   12/12 campos en muestra Campus ENE-2026 (factura, periodo ISO, valor, pago,

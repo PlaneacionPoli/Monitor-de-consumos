@@ -20,18 +20,20 @@ import pandas as pd
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE)
+from src.utils import rutas  # noqa: E402
+sys.path.insert(0, BASE)
 from src.storage.repositorio import Repositorio  # noqa: E402
 
 SALIDAS = os.path.join(BASE, "data", "outputs")
-RUTA_DB = os.path.join(SALIDAS, "monitor.db")
+RUTA_DB = rutas.ruta("monitor.db")
 
 
 def main():
-    rutas = sorted(glob.glob(os.path.join(SALIDAS, "validacion_*.xlsx")))
-    if not rutas:
+    validaciones = rutas.todos("validacion_*.xlsx")
+    if not validaciones:
         print("Sin validacion. Ejecute validar_atipicos.py primero.")
         return 1
-    ruta = rutas[-1]
+    ruta = validaciones[-1]
     run_id = re.search(r"validacion_(\d{8}_\d{6})", ruta).group(1)
     repo = Repositorio(RUTA_DB)
     base = pd.read_excel(ruta, sheet_name="Base")
@@ -44,7 +46,7 @@ def main():
     if "--exportar" in sys.argv:
         oficial = repo.exportar_oficial()
         fecha = datetime.now(ZoneInfo("America/Bogota")).strftime("%Y%m%d_%H%M%S")
-        salida = os.path.join(SALIDAS, f"base_oficial_{fecha}.xlsx")
+        salida = rutas.ruta(f"base_oficial_{fecha}.xlsx")
         oficial.to_excel(salida, sheet_name="Base", index=False)
         print(f"Base oficial: {len(oficial)} filas -> {salida}")
     rotos = repo.verificar_auditoria()

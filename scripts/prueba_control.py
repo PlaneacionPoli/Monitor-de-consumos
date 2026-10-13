@@ -13,6 +13,8 @@ import sys
 import pandas as pd
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+from src.utils import rutas  # noqa: E402
 MANUAL = os.path.join(BASE, "data", "EPM", "ENERGIA 2025.xlsx")
 HOJA = "MARZO 2025 "
 
@@ -23,8 +25,7 @@ def main():
     manual["No.FACTURA"] = manual["No.FACTURA"].astype(str).str.strip()
     print(f"Filas manual {HOJA.strip()}: {len(manual)}")
 
-    ruta_base = sorted(glob.glob(os.path.join(
-        BASE, "data", "outputs", "base_unificada_*.xlsx")))[-1]
+    ruta_base = rutas.todos("base_unificada_*.xlsx")[-1]
     base = pd.read_excel(ruta_base, sheet_name="Base")
     auto = base[(base["prestador"] == "EPM") & (base["servicio"] == "energia")].copy()
     auto["factura"] = auto["factura"].astype(str).str.strip()

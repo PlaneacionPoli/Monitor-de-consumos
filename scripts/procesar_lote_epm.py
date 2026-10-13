@@ -24,6 +24,8 @@ from src.processor.batch_epm import (
 )
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+from src.utils import rutas  # noqa: E402
 CARPETA_EPM = os.path.join(BASE, "data", "EPM")
 
 
@@ -81,7 +83,7 @@ def main():
         print(f"  FALLO {nombre}: {motivo}")
 
     fecha = datetime.now(ZoneInfo("America/Bogota")).strftime("%Y%m%d_%H%M%S")
-    salida = os.path.join(BASE, "data", "outputs", f"epm_{fecha}.xlsx")
+    salida = rutas.ruta(f"epm_{fecha}.xlsx")
     with pd.ExcelWriter(salida, engine="openpyxl") as writer:
         if filas_energia:
             pd.DataFrame(filas_energia).to_excel(writer, sheet_name="Energia", index=False)

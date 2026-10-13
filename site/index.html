@@ -102,54 +102,69 @@
 </main>
 
 <div id="app" hidden>
-  <header class="barra">
-    <div>
-      <h1>Monitor de Consumos Ambientales</h1>
-      <p id="meta" class="suave pequeno"></p>
+  <header class="cabecera">
+    <div class="cab-izq">
+      <img class="logo-cab" src="logo_poli.png" alt="Politécnico Grancolombiano">
+      <div class="cab-titulo">
+        <p class="eyebrow">Gestión ambiental</p>
+        <h1>Monitor de Consumos Ambientales</h1>
+        <p id="meta" class="suave pequeno"></p>
+      </div>
     </div>
     <div class="barra-acciones">
       <div class="segmento" role="tablist" aria-label="Sección">
-        <button role="tab" id="seg-ejecutiva" data-vista="ejecutiva" aria-selected="true">Ejecutiva</button>
-        <button role="tab" id="seg-operativa" data-vista="operativa" aria-selected="false">Operativa</button>
+        <button role="tab" id="seg-ejecutiva" data-vista="ejecutiva" data-icono="gauge" aria-selected="true">Ejecutiva</button>
+        <button role="tab" id="seg-operativa" data-vista="operativa" data-icono="lista" aria-selected="false">Operativa</button>
       </div>
-      <button id="salir" class="secundario" type="button">Cerrar sesión</button>
+      <button id="salir" class="secundario" type="button" data-icono="salir">Cerrar sesión</button>
     </div>
   </header>
 
   <section class="filtros" aria-label="Filtros">
-    <label>Servicio <select id="f-servicio"></select></label>
-    <label>Sede <select id="f-sede"></select></label>
-    <label>Prestador <select id="f-prestador"></select></label>
-    <label>Desde <select id="f-desde"></select></label>
-    <label>Hasta <select id="f-hasta"></select></label>
+    <div class="f-fila">
+      <div class="f-grupo">
+        <span class="f-tit" data-icono="filtro">Servicio</span>
+        <div id="f-servicio" class="pildoras" role="group" aria-label="Servicio"></div>
+      </div>
+      <div class="f-grupo">
+        <span class="f-tit" data-icono="calendario">Periodo</span>
+        <div id="f-rapidos" class="pildoras" role="group" aria-label="Rango rápido"></div>
+        <label class="f-mes">Desde <select id="f-desde"></select></label>
+        <label class="f-mes">Hasta <select id="f-hasta"></select></label>
+      </div>
+    </div>
+    <div class="f-fila">
+      <div class="combo" id="c-sede"></div>
+      <div class="combo" id="c-prestador"></div>
+      <div class="chips-fila">
+        <div id="chips" class="chips" aria-label="Filtros activos"></div>
+        <button id="limpiar" class="secundario chico-btn" type="button" hidden>Limpiar filtros</button>
+      </div>
+    </div>
   </section>
-  <div class="chips-fila">
-    <div id="chips" class="chips" aria-label="Filtros activos"></div>
-    <button id="limpiar" class="secundario chico-btn" type="button" hidden>Limpiar filtros</button>
-  </div>
-  <p class="suave pequeno pista">Haga clic en una barra de sede, en un mes o en una porción del estado para filtrar todo el tablero. Arrastre el control inferior de las series para acercarlas.</p>
+  <p class="suave pequeno pista">Haga clic en una barra de sede, en un mes o en una porción del estado para filtrar todo el tablero. Los CSU se agrupan en una sola sede: use la flecha para desplegarlos. Arrastre el control inferior de las series para acercarlas.</p>
 
   <!-- ===================== EJECUTIVA ===================== -->
   <div id="vista-ejecutiva">
     <aside id="aviso" class="aviso" hidden></aside>
     <section id="kpis-ej" class="kpis" aria-label="Indicadores clave"></section>
     <div class="rejilla">
-      <div class="tarjeta"><h2>Energía por mes <span class="suave">kWh</span></h2><div id="g-energia" class="grafico-ec"></div></div>
-      <div class="tarjeta"><h2>Agua por mes <span class="suave">m³</span></h2><div id="g-agua" class="grafico-ec"></div></div>
+      <div class="tarjeta"><h2 class="con-icono" data-icono="energia">Energía por mes <span class="suave">kWh</span></h2><div id="g-energia" class="grafico-ec"></div></div>
+      <div class="tarjeta"><h2 class="con-icono" data-icono="agua">Agua por mes <span class="suave">m³</span></h2><div id="g-agua" class="grafico-ec"></div></div>
       <div class="tarjeta">
-        <div class="cab-tarjeta"><h2 id="t-sede">Sedes con mayor consumo</h2>
+        <div class="cab-tarjeta"><h2 id="t-sede" class="con-icono" data-icono="edificio">Sedes con mayor consumo</h2>
           <div class="segmento chico" id="u-sede" role="group" aria-label="Unidad">
             <button data-u="kWh" aria-pressed="true">kWh</button><button data-u="m3" aria-pressed="false">m³</button>
           </div></div>
         <div id="g-sede"></div>
       </div>
-      <div class="tarjeta"><h2>Calidad de los datos</h2>
+      <div class="tarjeta"><h2 class="con-icono" data-icono="escudo">Calidad de los datos</h2>
         <div id="g-estado"></div>
         <p id="sin-sede" class="suave pequeno"></p>
       </div>
     </div>
     <div class="tarjeta">
-      <h2>Semáforo por sede</h2>
+      <div class="cab-tarjeta"><h2 class="con-icono" data-icono="semaforo">Semáforo por sede</h2></div>
       <div id="t-semaforo" class="tabla-caja"></div>
       <p class="suave pequeno">Crítico: 3 o más atípicos de severidad alta. Atención: al menos un atípico o menos de 60 % de facturas sin hallazgos. Normal: el resto.</p>
     </div>
@@ -159,10 +174,10 @@
   <div id="vista-operativa" hidden>
     <section id="cola-resumen" class="kpis" aria-label="Cola de trabajo"></section>
     <nav class="pestanas" role="tablist" aria-label="Operativa">
-      <button role="tab" data-tab="cola" aria-selected="true">Cola de revisión</button>
-      <button role="tab" data-tab="faltantes" aria-selected="false">Faltantes</button>
-      <button role="tab" data-tab="facturas" aria-selected="false">Todas las facturas</button>
-      <button role="tab" data-tab="prestadores" aria-selected="false">Calidad por prestador</button>
+      <button role="tab" data-tab="cola" data-icono="revision" aria-selected="true">Cola de revisión</button>
+      <button role="tab" data-tab="faltantes" data-icono="reloj" aria-selected="false">Faltantes</button>
+      <button role="tab" data-tab="facturas" data-icono="archivo" aria-selected="false">Todas las facturas</button>
+      <button role="tab" data-tab="prestadores" data-icono="enchufe" aria-selected="false">Calidad por prestador</button>
     </nav>
 
     <section id="tab-cola" class="panel">
@@ -179,13 +194,13 @@
       </div>
     </section>
     <section id="tab-faltantes" class="panel" hidden>
-      <div class="tarjeta"><h2>Posibles facturas faltantes</h2><div id="t-faltantes" class="tabla-caja"></div></div>
+      <div class="tarjeta"><h2 class="con-icono" data-icono="reloj">Posibles facturas faltantes</h2><div id="t-faltantes" class="tabla-caja"></div></div>
     </section>
     <section id="tab-facturas" class="panel" hidden>
       <div class="tarjeta">
         <div class="herramientas">
           <input id="buscar" type="search" placeholder="Buscar factura, sede, archivo…" aria-label="Buscar">
-          <button id="descargar" class="secundario" type="button">Descargar CSV</button>
+          <button id="descargar" class="secundario" type="button" data-icono="descarga">Descargar CSV</button>
         </div>
         <div id="t-facturas" class="tabla-caja"></div>
         <div class="paginas"><button id="ant" class="secundario" type="button">‹</button>
@@ -194,15 +209,25 @@
       </div>
     </section>
     <section id="tab-prestadores" class="panel" hidden>
-      <div class="tarjeta"><h2>Calidad de extracción por prestador</h2><div id="t-prestadores" class="tabla-caja"></div></div>
+      <div class="tarjeta"><h2 class="con-icono" data-icono="enchufe">Calidad de extracción por prestador</h2><div id="t-prestadores" class="tabla-caja"></div></div>
     </section>
   </div>
+  <p class="legal pie-legal">Vigilado MEN Resolución N. 19349 del 1980-11-04</p>
 </div>
 
 <dialog id="detalle" aria-labelledby="detalle-titulo">
-  <div class="cab-tarjeta"><h2 id="detalle-titulo">Detalle de la factura</h2>
-    <button id="cerrar-detalle" class="secundario" type="button">Cerrar</button></div>
-  <dl id="detalle-lista"></dl>
+  <header class="ficha-cab">
+    <span id="ficha-icono" class="ficha-icono"></span>
+    <div class="ficha-tit">
+      <p class="eyebrow">Ficha de factura</p>
+      <h2 id="detalle-titulo"></h2>
+      <p id="ficha-sub" class="suave"></p>
+    </div>
+    <span id="ficha-estado" class="etq-estado"></span>
+    <button id="cerrar-detalle" class="ficha-x" type="button" aria-label="Cerrar" data-icono="x"></button>
+  </header>
+  <div id="ficha-cuerpo" class="ficha-cuerpo"></div>
+  <footer class="ficha-pie"><span data-icono="archivo" id="ficha-archivo"></span></footer>
 </dialog>
 
 <script src="descifrar.js" defer></script>

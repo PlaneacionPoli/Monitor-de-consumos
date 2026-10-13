@@ -38,6 +38,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE)
+from src.utils import rutas  # noqa: E402
 from src.processor.faltantes import detectar_faltantes  # noqa: E402
 from src.storage.repositorio import clave_registro  # noqa: E402
 
@@ -45,7 +46,7 @@ SALIDAS = os.path.join(BASE, "data", "outputs")
 PLANTILLA = os.path.join(BASE, "src", "dashboard_estatico")
 SITIO = os.path.join(BASE, "site")
 RUTA_CORREOS = os.path.join(BASE, "config", "accesos_dashboard.txt")
-RUTA_CLAVES = os.path.join(SALIDAS, "accesos_dashboard.csv")
+RUTA_CLAVES = rutas.ruta("accesos_dashboard.csv")
 ITERACIONES = 600_000
 AAD_DATOS = b"monitor-consumos-v1"
 ARCHIVOS_SITIO = ["index.html", "app.js", "descifrar.js", "estilos.css", "logo_poli.png"]
@@ -88,7 +89,7 @@ def asignar_contrasenas(correos: list) -> dict:
 
 
 def mapa_sedes() -> dict:
-    ruta = os.path.join(SALIDAS, "catalogo_sedes.csv")
+    ruta = rutas.ruta("catalogo_sedes.csv")
     if not os.path.exists(ruta):
         return {}
     cat = pd.read_csv(ruta, dtype=str).fillna("")
@@ -101,7 +102,7 @@ def mapa_sedes() -> dict:
 
 
 def estados_almacen() -> dict:
-    ruta = os.path.join(SALIDAS, "monitor.db")
+    ruta = rutas.ruta("monitor.db")
     if not os.path.exists(ruta):
         return {}
     con = sqlite3.connect(ruta)
@@ -112,10 +113,10 @@ def estados_almacen() -> dict:
 
 
 def construir_datos() -> dict:
-    rutas = sorted(glob.glob(os.path.join(SALIDAS, "validacion_*.xlsx")))
-    if not rutas:
+    validaciones = rutas.todos("validacion_*.xlsx")
+    if not validaciones:
         raise SystemExit("Sin validacion. Ejecute validar_atipicos.py primero.")
-    base = pd.read_excel(rutas[-1], sheet_name="Base")
+    base = pd.read_excel(validaciones[-1], sheet_name="Base")
     base["periodo_fin"] = pd.to_datetime(base["periodo_fin"], errors="coerce")
 
     faltantes = detectar_faltantes(base)
@@ -152,7 +153,7 @@ def construir_datos() -> dict:
         })
     return {
         "generado": datetime.now(ZoneInfo("America/Bogota")).strftime("%Y-%m-%d %H:%M"),
-        "fuente": os.path.basename(rutas[-1]),
+        "fuente": os.path.basename(validaciones[-1]),
         "facturas": filas,
         "faltantes": faltantes,
     }

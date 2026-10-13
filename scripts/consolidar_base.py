@@ -18,12 +18,12 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+from src.utils import rutas  # noqa: E402
 SALIDAS = os.path.join(BASE, "data", "outputs")
 
 
-def ultimo(patron: str):
-    archivos = sorted(glob.glob(os.path.join(SALIDAS, patron)))
-    return archivos[-1] if archivos else None
+ultimo = rutas.ultimo   # busca en la carpeta de la etapa (data/outputs/<etapa>/)
 
 
 def normalizar(df: pd.DataFrame, servicio_por_defecto: str) -> pd.DataFrame:
@@ -132,7 +132,7 @@ def main():
     print(f"Base unificada: {len(base)} filas")
 
     fecha = datetime.now(ZoneInfo("America/Bogota")).strftime("%Y%m%d_%H%M%S")
-    salida = os.path.join(SALIDAS, f"base_unificada_{fecha}.xlsx")
+    salida = rutas.ruta(f"base_unificada_{fecha}.xlsx")
     with pd.ExcelWriter(salida, engine="openpyxl") as writer:
         base.drop(columns=["clave_archivo", "clave_factura", "_en_casa"]).to_excel(
             writer, sheet_name="Base", index=False)

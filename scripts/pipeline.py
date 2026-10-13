@@ -22,6 +22,8 @@ ETAPAS = [
     ("alertas", [sys.executable, "scripts/generar_alertas.py"]),
     ("almacen", [sys.executable, "scripts/cargar_almacen.py"]),
     ("prueba_control", [sys.executable, "scripts/prueba_control.py"]),
+    ("exportar", [sys.executable, "scripts/exportar_consolidado.py"]),
+    ("ordenar", [sys.executable, "scripts/ordenar_outputs.py"]),
     ("pruebas", [sys.executable, "-m", "pytest", "tests/", "-q"]),
 ]
 

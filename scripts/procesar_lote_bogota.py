@@ -17,6 +17,8 @@ from src.extractor.prestadores_bogota import extraer_eaab, extraer_enel, limpiar
 from src.ocr.ocr_engine import crear_engine_ocr
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+from src.utils import rutas  # noqa: E402
 CARPETAS = [
     os.path.join(BASE, "data", "raw", "RECIBOS DE ENERGIA SEDES"),
     os.path.join(BASE, "data", "raw", "RECIBOS ACUEDUCTO SEDES"),
@@ -85,7 +87,7 @@ def main():
 
     if energia or acueducto:
         fecha = datetime.now(ZoneInfo("America/Bogota")).strftime("%Y%m%d_%H%M%S")
-        salida = os.path.join(BASE, "data", "outputs", f"bogota_{fecha}.xlsx")
+        salida = rutas.ruta(f"bogota_{fecha}.xlsx")
         with pd.ExcelWriter(salida, engine="openpyxl") as writer:
             if energia:
                 pd.DataFrame(energia).to_excel(writer, sheet_name="Energia", index=False)

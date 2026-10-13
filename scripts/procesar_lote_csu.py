@@ -29,6 +29,8 @@ from src.processor.batch_epm import (
 )
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+from src.utils import rutas  # noqa: E402
 CARPETA = os.path.join(BASE, "data", "raw", "SERVICIOS PUBLICOS CSUs.2026")
 
 
@@ -135,7 +137,7 @@ def main():
         print(f"  PENDIENTE {nombre}: {motivo}")
 
     fecha = datetime.now(ZoneInfo("America/Bogota")).strftime("%Y%m%d_%H%M%S")
-    salida = os.path.join(BASE, "data", "outputs", f"csu_{fecha}.xlsx")
+    salida = rutas.ruta(f"csu_{fecha}.xlsx")
     with pd.ExcelWriter(salida, engine="openpyxl") as writer:
         if energia:
             pd.DataFrame(energia).to_excel(writer, sheet_name="Energia", index=False)

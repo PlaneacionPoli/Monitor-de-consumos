@@ -20,15 +20,14 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.processor.validacion import validar_base  # noqa: E402
+from src.utils import rutas  # noqa: E402
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SALIDAS = os.path.join(BASE, "data", "outputs")
 UMBRAL = 0.20
 
 
-def ultimo(patron: str):
-    archivos = sorted(glob.glob(os.path.join(SALIDAS, patron)))
-    return archivos[-1] if archivos else None
+ultimo = rutas.ultimo   # busca en la carpeta de la etapa (data/outputs/<etapa>/)
 
 
 def main():
@@ -60,7 +59,7 @@ def main():
     print(f"Pendientes manuales: {len(cola)}")
 
     fecha = datetime.now(ZoneInfo("America/Bogota")).strftime("%Y%m%d_%H%M%S")
-    salida = os.path.join(SALIDAS, f"validacion_{fecha}.xlsx")
+    salida = rutas.ruta(f"validacion_{fecha}.xlsx")
     with pd.ExcelWriter(salida, engine="openpyxl") as writer:
         base.to_excel(writer, sheet_name="Base", index=False)
         base.loc[atipicos_idx].to_excel(writer, sheet_name="Atipicos", index=False)

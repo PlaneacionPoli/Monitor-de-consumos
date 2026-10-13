@@ -3,15 +3,17 @@ Log de auditoria de revisiones humanas (Fase 2 del plan).
 
 Propuesta §5/§9: ninguna modificacion manual sin registro (quien, cuando,
 valor original vs. nuevo). Cada decision del Analista SGA sobre la cola de
-revision (atipicos + pendientes) se anexa a data/outputs/auditoria.csv.
+revision (atipicos + pendientes) se anexa a data/outputs/control/auditoria.csv.
 """
 import csv
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from src.utils import rutas
+
 BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-RUTA_LOG = os.path.join(BASE, "data", "outputs", "auditoria.csv")
+RUTA_LOG = rutas.ruta("auditoria.csv")
 CAMPOS = ["fecha", "revisor", "factura", "archivo", "campo", "valor_original",
           "valor_nuevo", "decision", "observacion"]
 

@@ -11,13 +11,15 @@ import sys
 import fitz
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+from src.utils import rutas  # noqa: E402
 RUTAS = [
     os.path.join(BASE, "data", "raw", "RECIBOS ACUEDUCTO SEDES"),
     os.path.join(BASE, "data", "raw", "RECIBOS DE ENERGIA SEDES"),
     os.path.join(BASE, "data", "raw", "SERVICIOS PUBLICOS CSUs.2026"),
     os.path.join(BASE, "data", "EPM"),
 ]
-SALIDA = os.path.join(BASE, "data", "outputs", "inventario_pdfs.csv")
+SALIDA = rutas.ruta("inventario_pdfs.csv")
 UMBRAL_CHARS = 50
 
 

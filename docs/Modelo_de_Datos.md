@@ -1,6 +1,6 @@
 # Modelo de datos (F1-D01)
 
-Almacén local SQLite (`data/outputs/monitor.db`), definido en `src/storage/repositorio.py`.
+Almacén local SQLite (`data/outputs/05_oficial/monitor.db`), definido en `src/storage/repositorio.py`.
 **Definitivo** = implementado y probado. **Pendiente** = depende de datos o decisiones externas.
 
 ## Entidades implementadas (definitivo)

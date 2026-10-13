@@ -171,7 +171,8 @@ class FacturaDashboard:
         """direccion_norm -> sede (confirmada si existe, si no sugerida)."""
         import glob as _glob
         carpeta = self.config.get('salida', {}).get('carpeta_salida', 'data/outputs')
-        candidatos = sorted(_glob.glob(os.path.join(carpeta, "catalogo_sedes.csv")))
+        from src.utils import rutas
+        candidatos = rutas.todos("catalogo_sedes.csv")
         if not candidatos:
             return {}, []
         cat = pd.read_csv(candidatos[-1], dtype=str).fillna("")
@@ -188,7 +189,8 @@ class FacturaDashboard:
     def _cargar_base_unificada(self, patron: str) -> pd.DataFrame | None:
         import glob as _glob
         carpeta = self.config.get('salida', {}).get('carpeta_salida', 'data/outputs')
-        candidatos = sorted(_glob.glob(os.path.join(carpeta, patron)))
+        from src.utils import rutas
+        candidatos = rutas.todos(patron)
         if not candidatos:
             return None
         df = pd.read_excel(candidatos[-1], sheet_name="Base")

@@ -20,6 +20,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.processor.faltantes import detectar_faltantes  # noqa: E402
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
+from src.utils import rutas  # noqa: E402
 SALIDAS = os.path.join(BASE, "data", "outputs")
 
 
@@ -27,7 +29,7 @@ def main():
     corte = None
     if "--corte" in sys.argv:
         corte = sys.argv[sys.argv.index("--corte") + 1]
-    validacion = sorted(glob.glob(os.path.join(SALIDAS, "validacion_*.xlsx")))
+    validacion = rutas.todos("validacion_*.xlsx")
     if not validacion:
         print("Sin validacion. Ejecute validar_atipicos.py primero.")
         return 1
@@ -43,7 +45,7 @@ def main():
     print(f"Atipicos: {len(atipicos)} | Faltantes: {len(faltantes)}")
 
     fecha = datetime.now(ZoneInfo("America/Bogota")).strftime("%Y%m%d_%H%M%S")
-    salida = os.path.join(SALIDAS, f"alertas_{fecha}.xlsx")
+    salida = rutas.ruta(f"alertas_{fecha}.xlsx")
     with pd.ExcelWriter(salida, engine="openpyxl") as writer:
         atipicos.to_excel(writer, sheet_name="Atipicos", index=False)
         if faltantes:

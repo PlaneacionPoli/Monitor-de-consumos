@@ -16,7 +16,7 @@ GitHub Pages solo sirve archivos estáticos. Un login hecho solo con JavaScript 
 
 1. Agregue los correos autorizados, uno por línea, en `config/accesos_dashboard.txt` (no se versiona).
 2. Genere la validación vigente: `python scripts/pipeline.py` (o al menos hasta `validar_atipicos`).
-3. `python scripts/publicar_dashboard.py` crea `site/` y escribe las contraseñas en `data/outputs/accesos_dashboard.csv` (no se versiona). **Entregue a cada persona su contraseña por un canal distinto al repositorio.**
+3. `python scripts/publicar_dashboard.py` crea `site/` y escribe las contraseñas en `data/outputs/control/accesos_dashboard.csv` (no se versiona). **Entregue a cada persona su contraseña por un canal distinto al repositorio.**
 4. Suba `site/` a GitHub y active Pages (Settings → Pages) sobre esa carpeta o una rama `gh-pages`.
 5. Para actualizar datos: repita 2–3 y suba de nuevo. Las contraseñas existentes se conservan.
 
