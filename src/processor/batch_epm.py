@@ -82,7 +82,7 @@ def extraer_datos_epm(texto, filename, anio=None):
     m = re.search(r'Direcci.n prestaci.n servicio:\s*(.+?)(?:\n|$)', texto)
     if m: data['direccion'] = m.group(1).strip()
 
-    m = re.search(r'Periodo Facturado del\s+(.+?)\s+al\s+(.+?)\s+\((\d+)\s+d.as\)', texto)
+    m = re.search(r'(?:Periodo Facturado|C.lculo Consumo)\s+del\s+(.+?)\s+al\s+(.+?)\s+\((\d+)\s+d.as\)', texto)
     if m:
         data['periodo_inicio'] = m.group(1).strip()
         data['periodo_fin'] = m.group(2).strip()
@@ -131,6 +131,10 @@ def extraer_datos_epm(texto, filename, anio=None):
     m = re.search(r'Documento No:\s*([\d\s\-]+)', texto)
     if m: data['documento'] = m.group(1).strip()
 
+    # La cuenta de EPM es el 'Contrato' (el 'Producto' es por servicio).
+    m = re.search(r'\bContrato\s+(\d{4,})', texto)
+    if m: data['contrato'] = m.group(1)
+
     m = re.search(r'Cliente:\s*(.+?)(?:\n|$)', texto)
     if m: data['cliente'] = m.group(1).strip()
 
@@ -160,6 +164,10 @@ def construir_fila_energia(data):
     """
     total_energia = data.get('total_energia', 0) or 0
     total_alumbrado = data.get('total_alumbrado', 0) or 0
+    # El aseo (Emvarias) viene en el mismo recibo; si ese recibo tambien trae
+    # acueducto, el aseo se registra en la fila de acueducto para no duplicarlo.
+    con_acueducto = bool(data.get('total_acueducto') or data.get('total_alcantarillado'))
+    aseo = 0 if con_acueducto else (data.get('total_aseo', 0) or 0)
     return {
         'No.FACTURA': data.get('documento', ''),
         'PERIODO INICIO': data.get('periodo_inicio_iso') or data.get('periodo_inicio', ''),
@@ -167,8 +175,10 @@ def construir_fila_energia(data):
         'DIRECCION': data.get('direccion', ''),
         'PROVEEDOR': 'EPM',
         'VALOR FACT.': total_energia + total_alumbrado,
+        'VALOR ASEO': aseo,
         'FECHA DE PAGO': '',
-        'No.CUENTA CONTRATO': '',
+        'No.CUENTA CONTRATO': data.get('contrato', ''),
+        'DIAS FACTURADOS': data.get('dias_facturados', ''),
         'CONSUMO Kwh': data.get('consumo_kwh', 0),
         'CIUDAD': data.get('municipio', ''),
         'TIPO': 'Energia',
@@ -191,7 +201,8 @@ def construir_fila_acueducto(data):
         'RECOLECCION BASURAS': data.get('total_aseo', 0),
         'VALOR TOTAL': val_total,
         'FECHA DE PAGO': '',
-        'CONTRATO': '',
+        'CONTRATO': data.get('contrato', ''),
+        'DIAS FACTURADOS': data.get('dias_facturados', ''),
         'CONSUMO M3': data.get('consumo_m3', 0),
         'CIUDAD': data.get('municipio', ''),
         'TIPO': 'Acueducto',

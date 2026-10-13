@@ -108,3 +108,22 @@ def test_confianza_cuenta_los_tres_campos_clave_R06():
     df = _base([100.0, None], fines)
     base, _ = validar_base(df)
     assert list(base["confianza"]) == [1.0, 0.67]
+
+
+def test_atipico_se_omite_de_la_referencia_de_la_mediana():
+    """Un pico no debe normalizar al siguiente: la mediana ignora atipicos previos."""
+    fines = _meses("2025-01-31", 6)
+    base, idx = validar_base(_base([100.0, 100.0, 100.0, 300.0, 300.0, 100.0], fines))
+    # 300 (abr) y 300 (may) son atipicos vs 100; sin omision, may usaria [100,100,300]
+    assert len(idx) == 2
+    assert "vs 100 (mediana3)" in base.loc[idx[1], "detalle"]
+
+
+def test_recibo_bimestral_se_mensualiza_antes_de_comparar():
+    fines = _meses("2025-01-31", 5)
+    consumos = [100.0, 100.0, 100.0, 100.0, 200.0]          # ultimo = 2 meses
+    bim = [False, False, False, False, True]
+    df = _base(consumos, fines, bimestral=bim,
+               consumo_mensual=[c / (2 if b else 1) for c, b in zip(consumos, bim)])
+    base, idx = validar_base(df)
+    assert idx == []

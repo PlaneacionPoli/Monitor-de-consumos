@@ -8,6 +8,7 @@ poder probarlas. `validar_base` asigna `estado`, `detalle`, `severidad` y
 import pandas as pd
 
 UMBRAL = 0.20
+MIN_LIMPIOS = 3     # periodos no atipicos minimos para omitir atipicos de la referencia
 FACTURA_NO_IDENTIFICADA = "N° factura no identificado"
 # R-02: unidad esperada por servicio (aseo, $/kg, aun no tiene fila propia: DEC-03).
 UNIDAD_POR_SERVICIO = {"energia": "kWh", "acueducto": "m3"}
@@ -42,35 +43,60 @@ def marcar_atipicos(base: pd.DataFrame, umbral: float = UMBRAL) -> list:
     Sin ese periodo se compara con la mediana de los 3 periodos previos (metodo
     'mediana3', suplente). Serie = servicio + medidor, sin sede. Solo marca filas
     cuyo estado sea OK. Retorna los indices marcados.
+
+    - Compara consumo mensualizado (`consumo_mensual`): un recibo bimestral se
+      divide entre 2 para no verse como pico frente a uno mensual.
+    - Los atipicos ya detectados se omiten de la referencia (mediana o mismo
+      periodo del anio anterior): un pico no debe normalizar al siguiente. Solo
+      aplica con >= 3 periodos limpios; con menos historia se usan todos los
+      previos, porque una unica referencia limpia dejaria marcada toda la serie.
+    - Deja `consumo_ref`, `variacion` y `metodo_ref` en cada fila evaluada.
     """
+    col = "consumo_mensual" if "consumo_mensual" in base.columns else "consumo"
+    for nombre in ("consumo_ref", "variacion"):
+        base[nombre] = float("nan")
+    base["metodo_ref"] = ""
     marcados = []
     for (_servicio, _cuenta), grupo in base[~base["sin_serie"]].groupby(
             ["servicio", "cuenta_grupo"]):
         grupo = grupo.sort_values("periodo_fin")
-        por_ymes = grupo.set_index("ymes")["consumo"].to_dict()
-        consumos = grupo["consumo"].tolist()
-        for i, (idx, fila) in enumerate(grupo.iterrows()):
-            if pd.isna(fila["consumo"]) or fila["consumo"] == 0:
+        validos = []        # (ymes, consumo) de periodos previos NO atipicos
+        todos = []          # (ymes, consumo) de todos los periodos previos
+        for idx, fila in grupo.iterrows():
+            actual = fila[col]
+            if pd.isna(actual) or actual == 0:
                 continue
-            actual = fila["consumo"]
             try:
                 y, m = fila["ymes"].split("-")
                 ref_ymes = f"{int(y) - 1}-{m}"
             except ValueError:
                 continue
-            if ref_ymes in por_ymes and pd.notna(por_ymes[ref_ymes]) and por_ymes[ref_ymes]:
-                ref, metodo = por_ymes[ref_ymes], "anual"
+            anual = [c for ym, c in validos if ym == ref_ymes]
+            if anual:
+                ref, metodo = anual[-1], "anual"
             else:
-                previos = [c for c in consumos[max(0, i - 3):i] if pd.notna(c) and c]
+                previos = [c for _, c in validos[-3:]]
+                if len(previos) < MIN_LIMPIOS:
+                    previos = [c for _, c in todos[-3:]]
                 if not previos:
+                    validos.append((fila["ymes"], actual))
+                    todos.append((fila["ymes"], actual))
                     continue
                 ref, metodo = sorted(previos)[len(previos) // 2], "mediana3"
             variacion = (actual - ref) / ref
-            if abs(variacion) > umbral and base.at[idx, "estado"] == "OK":
-                base.at[idx, "estado"] = "ATIPICO_REVISAR"
-                base.at[idx, "detalle"] = f"{variacion:+.1%} vs {ref:,.0f} ({metodo})"
-                base.at[idx, "severidad"] = "ALTA" if abs(variacion) > 0.50 else "MEDIA"
-                marcados.append(idx)
+            base.at[idx, "consumo_ref"] = ref
+            base.at[idx, "variacion"] = variacion
+            base.at[idx, "metodo_ref"] = metodo
+            if abs(variacion) > umbral:
+                if base.at[idx, "estado"] == "OK":
+                    base.at[idx, "estado"] = "ATIPICO_REVISAR"
+                    base.at[idx, "detalle"] = f"{variacion:+.1%} vs {ref:,.0f} ({metodo})"
+                    base.at[idx, "severidad"] = "ALTA" if abs(variacion) > 0.50 else "MEDIA"
+                    marcados.append(idx)
+                    todos.append((fila["ymes"], actual))
+                    continue          # atipico: no entra a la referencia limpia
+            validos.append((fila["ymes"], actual))
+            todos.append((fila["ymes"], actual))
     return marcados
 
 

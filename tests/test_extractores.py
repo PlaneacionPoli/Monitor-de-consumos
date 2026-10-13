@@ -123,6 +123,9 @@ def test_eaab_bloque():
     assert datos["periodo_inicio"] == "2025-12-21"
     assert datos["periodo_fin"] == "2026-01-20"
     assert datos["pago_oportuno"] == "2026-02-26"
+    # el "Numero de esta factura" de EAAB es el numero para pagos
+    assert datos["no_factura"] == "42806740215"
+    assert datos["periodicidad"] == "mensual"
 
 
 def test_afinia_bloque():
@@ -187,6 +190,26 @@ def test_epm_valor_incluye_alumbrado():
     fila = construir_fila_energia({"documento": "x", "total_energia": 35603.0,
                                    "total_alumbrado": 28000.0, "consumo_kwh": 40})
     assert fila["VALOR FACT."] == 63603.0
+
+
+def test_epm_contrato_y_aseo_en_fila_de_energia():
+    from src.processor.batch_epm import construir_fila_energia, extraer_datos_epm
+    texto = "\n".join(["Documento No: 145 1386318", "Contrato 778241",
+                      "Total Energía", "$ 24.258,36", "Total Aseo", "$ 79.983,82",
+                      "Total Alumbrado", "$ 28.000,00"])
+    datos = extraer_datos_epm(texto, "x.pdf")
+    assert datos["contrato"] == "778241"
+    fila = construir_fila_energia({**datos, "total_energia": 24258.36,
+                                   "total_aseo": 79983.82, "total_alumbrado": 28000.0})
+    assert fila["No.CUENTA CONTRATO"] == "778241"
+    assert fila["VALOR ASEO"] == 79983.82
+
+
+def test_epm_aseo_no_se_duplica_si_el_recibo_trae_acueducto():
+    from src.processor.batch_epm import construir_fila_energia
+    fila = construir_fila_energia({"total_energia": 100.0, "total_aseo": 50.0,
+                                   "total_acueducto": 10.0})
+    assert fila["VALOR ASEO"] == 0
 
 
 def test_auditoria_registra_y_lee(tmp_path, monkeypatch):

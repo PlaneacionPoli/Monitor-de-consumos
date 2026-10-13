@@ -147,6 +147,7 @@
   <!-- ===================== EJECUTIVA ===================== -->
   <div id="vista-ejecutiva">
     <aside id="aviso" class="aviso" hidden></aside>
+    <section id="alertas" class="tarjeta alertas" aria-label="Alertas de consumo atípico" hidden></section>
     <section id="kpis-ej" class="kpis" aria-label="Indicadores clave"></section>
     <div class="rejilla">
       <div class="tarjeta"><h2 class="con-icono" data-icono="energia">Energía por mes <span class="suave">kWh</span></h2><div id="g-energia" class="grafico-ec"></div></div>
@@ -162,6 +163,12 @@
         <div id="g-estado"></div>
         <p id="sin-sede" class="suave pequeno"></p>
       </div>
+    </div>
+    <div class="rejilla">
+      <div class="tarjeta"><h2 class="con-icono" data-icono="valor">Valor facturado por mes <span class="suave">por servicio</span></h2><div id="g-valor" class="grafico-ec"></div></div>
+      <div class="tarjeta"><h2 class="con-icono" data-icono="alerta">Atípicos por mes <span class="suave">facturas</span></h2><div id="g-atipicos" class="grafico-ec"></div></div>
+      <div class="tarjeta"><h2 class="con-icono" data-icono="enchufe">Valor por prestador <span class="suave">servicio y aseo</span></h2><div id="g-prestador" class="grafico-ec"></div></div>
+      <div class="tarjeta"><h2 class="con-icono" data-icono="edificio">Valor por sede <span class="suave">servicio y aseo</span></h2><div id="g-valor-sede" class="grafico-ec"></div></div>
     </div>
     <div class="tarjeta">
       <div class="cab-tarjeta"><h2 class="con-icono" data-icono="semaforo">Semáforo por sede</h2></div>

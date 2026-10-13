@@ -352,3 +352,14 @@ dialog#detalle[open]{animation:pop .22s ease-out}
 .kpi>.suave{padding-right:2.4rem}
 .ficha-stats{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
 .ficha-stat strong{font-size:1rem}
+
+/* Alertas de consumo atipico (vista ejecutiva) */
+.alertas{border-left:4px solid var(--alta);margin-bottom:1rem}
+.alertas .cab-alertas{display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:center;justify-content:space-between}
+.alertas h2{margin:0}
+.alertas ul{list-style:none;margin:.6rem 0 0;padding:0;display:grid;gap:.35rem}
+.alertas li button{all:unset;cursor:pointer;display:grid;grid-template-columns:auto 1fr auto;gap:.2rem .7rem;align-items:center;width:100%;box-sizing:border-box;padding:.35rem .5rem;border-radius:6px}
+.alertas li button:hover,.alertas li button:focus-visible{background:rgba(120,140,160,.14)}
+.alertas .var{font-weight:600;font-variant-numeric:tabular-nums}
+.alertas .var.sube{color:var(--alta)}
+.alertas .var.baja{color:var(--info)}

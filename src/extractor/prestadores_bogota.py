@@ -258,8 +258,7 @@ def extraer_eaab(texto: str, nombre_archivo: str = "") -> Dict[str, Any]:
     posterior al ancla 'MENSUAL' del reparto). El mapeo posicional es:
     MENSUAL -> cuenta_contrato, numero_pagos, periodo, pago_oportuno,
     suspension, proxima_factura. Verificado en muestra Campus ENE-2026.
-    Campos 'numero_factura' y 'id_predio' sin valor visible en texto:
-    requieren validacion contra factura visual.
+    El 'Numero de esta factura' es el numero para pagos (verificado en PDF).
     """
     texto = limpiar_texto(texto)
     datos: Dict[str, Any] = {"prestador": "EAAB", "servicio": "acueducto",
@@ -274,6 +273,9 @@ def extraer_eaab(texto: str, nombre_archivo: str = "") -> Dict[str, Any]:
     if bloque:
         datos["cuenta_contrato"] = bloque.group(1)
         datos["numero_pagos"] = bloque.group(2)
+        # En el recibo EAAB el "Numero para pagos" rotula "Numero de esta factura".
+        datos["no_factura"] = bloque.group(2)
+        datos["periodicidad"] = "bimestral" if "BIMESTRAL" in bloque.group(0) else "mensual"
         datos["periodo_inicio"] = _parse_fecha_eaab(bloque.group(3))
         datos["periodo_fin"] = _parse_fecha_eaab(bloque.group(4))
         datos["pago_oportuno"] = _parse_fecha_eaab(bloque.group(5))
@@ -306,5 +308,5 @@ def extraer_eaab(texto: str, nombre_archivo: str = "") -> Dict[str, Any]:
         valores = re.findall(r"\d+", historico.group(1))
         datos["consumo_m3"] = float(valores[-1]) if valores else None
 
-    datos["_pendiente_visual"] = "numero_factura, id_predio sin valor en texto"
+    datos["_pendiente_visual"] = "id_predio sin valor en texto"
     return datos

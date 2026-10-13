@@ -282,6 +282,10 @@ def extraer_triple_a(texto: str, nombre_archivo: str = "") -> Dict[str, Any]:
                    [acueducto, alcantarillado, aseo, alumbrado]]
     if all(c is not None for c in componentes):
         datos["valor_total"] = round(sum(componentes), 2)
+    datos["valor_acueducto"] = componentes[0]
+    datos["valor_alcantarillado"] = componentes[1]
+    datos["valor_aseo"] = componentes[2]
+    datos["valor_alumbrado"] = componentes[3]
 
     seccion = re.search(r"Consumo basico Comercial(.*?)TOTAL ACUEDUCTO",
                         texto, re.DOTALL)

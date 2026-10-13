@@ -26,50 +26,86 @@ SALIDAS = os.path.join(BASE, "data", "outputs")
 ultimo = rutas.ultimo   # busca en la carpeta de la etapa (data/outputs/<etapa>/)
 
 
+def _primero(r, claves):
+    """Primer valor no vacio de la fila para las columnas dadas (orden = prioridad)."""
+    for clave in claves:
+        valor = r.get(clave)
+        if valor is None or (not isinstance(valor, str) and pd.isna(valor)):
+            continue
+        texto = str(valor).strip()
+        if texto.endswith(".0") and texto[:-2].isdigit():   # Excel guarda ids como float
+            texto = texto[:-2]
+        if texto not in ("", "0"):
+            return texto
+    return None
+
+
+def _numero(r, claves):
+    """Primer valor numerico de la fila para las columnas dadas, o None."""
+    for clave in claves:
+        valor = pd.to_numeric(r.get(clave), errors="coerce")
+        if pd.notna(valor):
+            return float(valor)
+    return None
+
+
+# Prioridad de identificadores: factura = No. de factura o DOCUMENTO EQUIVALENTE
+# ELECTRONICO No.; cuenta = cuenta / contrato / NIU / cliente segun el prestador.
+CLAVES_FACTURA = ["no_factura", "No.FACTURA", "No. FACTURA", "documento_equivalente",
+                  "factura_electronica", "documento"]
+CLAVES_CUENTA = ["no_cuenta", "cuenta_contrato", "cuenta", "cuenta_poliza", "contrato",
+                 "CONTRATO", "No.CUENTA CONTRATO", "No.CUENTA CONTRATO", "niu",
+                 "cuenta_ruta", "codigo_interno"]
+
+
 def normalizar(df: pd.DataFrame, servicio_por_defecto: str) -> pd.DataFrame:
     """Mapea columnas heterogeneas al esquema comun."""
     filas = []
     for _, r in df.iterrows():
-        factura = (r.get("no_factura") or r.get("No.FACTURA")
-                   or r.get("No. FACTURA") or r.get("documento"))
-        consumo = r.get("consumo_kwh") if pd.notna(r.get("consumo_kwh")) else None
-        if consumo is None:
-            consumo = r.get("CONSUMO Kwh")
+        factura = _primero(r, CLAVES_FACTURA)
+        consumo = _numero(r, ["consumo_kwh", "CONSUMO Kwh"])
         unidad = "kWh"
-        if consumo is None or (pd.isna(consumo)):
-            consumo = r.get("consumo_m3")
-            if consumo is None:
-                consumo = r.get("CONSUMO M3")
+        if consumo is None:
+            consumo = _numero(r, ["consumo_m3", "CONSUMO M3"])
             unidad = "m3"
-        valor = r.get("valor_factura")
-        if valor is None or pd.isna(valor):
-            valor = r.get("VALOR FACT.")
-        if valor is None or pd.isna(valor):
-            valor = r.get("valor_total")
-        if valor is None or pd.isna(valor):
-            valor = r.get("VALOR TOTAL")
+        valor = _numero(r, ["valor_factura", "VALOR FACT.", "valor_total", "VALOR TOTAL"])
+        # El aseo viaja dentro del recibo (EPM, Enel, Triple A): se separa del servicio.
+        aseo = _numero(r, ["valor_aseo", "VALOR ASEO", "RECOLECCION BASURAS"]) or 0.0
+        if r.get("PROVEEDOR") == "EPM" and "VALOR ASEO" in r.index and pd.notna(valor):
+            valor = valor + aseo   # EPM energia: VALOR FACT. no incluye el aseo
+        alumbrado = _numero(r, ["valor_alumbrado"]) or 0.0
         periodo_ini = r.get("periodo_inicio")
         if periodo_ini is None or (isinstance(periodo_ini, float) and pd.isna(periodo_ini)):
             periodo_ini = r.get("PERIODO INICIO")
         periodo_fin = r.get("periodo_fin")
         if periodo_fin is None or (isinstance(periodo_fin, float) and pd.isna(periodo_fin)):
             periodo_fin = r.get("PERIODO FINAL") or r.get("PERIODO FIN")
-        cuenta = (r.get("no_cuenta") or r.get("cuenta_contrato") or r.get("cuenta")
-                  or r.get("cuenta_poliza") or r.get("contrato")
-                  or r.get("cuenta_ruta") or r.get("No.CUENTA CONTRATO")
-                  or r.get("CONTRATO"))
+        ini = pd.to_datetime(periodo_ini, errors="coerce")
+        fin = pd.to_datetime(periodo_fin, errors="coerce")
+        dias = (fin - ini).days + 1 if pd.notna(ini) and pd.notna(fin) else None
+        bimestral = bool((dias is not None and dias > 45)
+                         or str(r.get("periodicidad")).lower() == "bimestral"
+                         or (pd.notna(r.get("periodo_bimestral"))
+                             and str(r.get("periodo_bimestral")).strip() != ""))
+        meses = 2 if bimestral else 1
         filas.append({
             "prestador": (r.get("prestador") or r.get("PROVEEDOR")
                           or r.get("COMPAÑÍA") or r.get("COMPANIA")),
             "servicio": r.get("servicio") or servicio_por_defecto,
             "sede": r.get("sede_origen") or r.get("CIUDAD"),
-            "cuenta": str(cuenta).strip() if cuenta is not None and pd.notna(cuenta) and str(cuenta).strip() not in ("", "0") else None,
-            "factura": str(factura).strip() if factura is not None and pd.notna(factura) and str(factura).strip() not in ("", "0") else None,
-            "periodo_inicio": pd.to_datetime(periodo_ini, errors="coerce"),
-            "periodo_fin": pd.to_datetime(periodo_fin, errors="coerce"),
-            "consumo": pd.to_numeric(consumo, errors="coerce"),
+            "cuenta": _primero(r, CLAVES_CUENTA),
+            "factura": factura,
+            "periodo_inicio": ini,
+            "periodo_fin": fin,
+            "dias": dias,
+            "bimestral": bimestral,
+            "consumo": consumo,
+            "consumo_mensual": consumo / meses if consumo is not None else None,
             "unidad": unidad,
-            "valor": pd.to_numeric(valor, errors="coerce"),
+            "valor": valor,
+            "valor_servicio": valor - aseo - alumbrado if valor is not None else None,
+            "valor_aseo": aseo,
+            "valor_alumbrado": alumbrado,
             "fecha_pago": pd.to_datetime(
                 r.get("fecha_pago") or r.get("FECHA DE PAGO"), errors="coerce"),
             "archivo": r.get("archivo_origen") or r.get("ARCHIVO ORIGEN"),

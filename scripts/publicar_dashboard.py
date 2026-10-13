@@ -143,7 +143,11 @@ def construir_datos() -> dict:
             "archivo": r.get("archivo"), "periodo_inicio": r.get("periodo_inicio"),
             "periodo_fin": r.get("periodo_fin"), "ymes": r.get("ymes"),
             "consumo": r.get("consumo"), "unidad": r.get("unidad"),
-            "valor": r.get("valor"), "estado": r.get("estado"),
+            "valor": r.get("valor"), "valor_servicio": r.get("valor_servicio"),
+            "valor_aseo": r.get("valor_aseo"), "bimestral": bool(r.get("bimestral")),
+            "dias": r.get("dias"), "consumo_mensual": r.get("consumo_mensual"),
+            "consumo_ref": r.get("consumo_ref"), "variacion": r.get("variacion"),
+            "metodo_ref": r.get("metodo_ref"), "estado": r.get("estado"),
             "severidad": r.get("severidad"), "detalle": r.get("detalle"),
             "confianza": r.get("confianza"),
             "revision": estados.get(clave_registro(

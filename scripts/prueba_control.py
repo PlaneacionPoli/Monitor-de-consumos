@@ -39,7 +39,9 @@ def main():
         a = cand.iloc[0]
         comparadas += 1
         ok_consumo = abs(float(a["consumo"]) - float(m["CONSUMO Kwh"])) < 0.01
-        ok_valor = abs(float(a["valor"]) - float(m["VALOR  FACT."])) < 1.0
+        # La base manual no incluye el aseo: se compara el valor sin aseo.
+        valor_sin_aseo = float(a["valor"]) - float(a.get("valor_aseo", 0) or 0)
+        ok_valor = abs(valor_sin_aseo - float(m["VALOR  FACT."])) < 1.0
         ok_periodo = (pd.to_datetime(a["periodo_fin"]).date()
                       == pd.to_datetime(m["PERIODO FINAL"]).date())
         if ok_consumo and ok_valor and ok_periodo:

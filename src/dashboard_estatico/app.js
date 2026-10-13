@@ -398,12 +398,135 @@
   function ejecutiva() {
     const filas = filtradas(false);
     aviso();
+    alertas(filas);
     kpisEjecutivos(filas);
     graficoMensual("g-energia", "kWh", css("--energia"));
     graficoMensual("g-agua", "m3", css("--agua"));
     graficoSedes(filas);
     calidad(filas);
+    graficoValorMes(filas);
+    graficoAtipicosMes(filas);
+    graficoValorPor("g-prestador", filas, "prestador");
+    graficoValorPor("g-valor-sede", filas, "sede");
     semaforo(filas);
+  }
+
+  // ---------- alertas de consumo atipico ----------
+  function alertas(filas) {
+    const caja = $("alertas");
+    vaciar(caja);
+    const atip = filas.filter(esAtipico);
+    caja.hidden = !atip.length;
+    if (!atip.length) return;
+    const altas = atip.filter((r) => r.severidad === "ALTA");
+    const cab = el("div", null, "cab-alertas");
+    const h = el("h2", `${fmt.format(atip.length)} facturas con consumo atípico`, "con-icono");
+    h.insertBefore(icono("alerta"), h.firstChild);
+    cab.appendChild(h);
+    const ver = el("button", "Ver todas en Operativa", "secundario chico-btn");
+    ver.type = "button";
+    ver.addEventListener("click", () => { hallazgo = altas.length ? "ALTA" : "MEDIA"; $("f-hallazgo").value = hallazgo; cambiarVista("operativa"); });
+    cab.appendChild(ver);
+    caja.appendChild(cab);
+    caja.appendChild(el("p",
+      `${fmt.format(altas.length)} de severidad alta (más de 50 % de variación) y ${fmt.format(atip.length - altas.length)} media (más de 20 %). ` +
+      "Los atípicos no entran en la mediana ni en el valor de referencia de los periodos siguientes, y los recibos bimestrales se comparan por mes.",
+      "suave pequeno"));
+    const lista = document.createElement("ul");
+    atip.slice().sort((a, b) => Math.abs(b.variacion || 0) - Math.abs(a.variacion || 0)).slice(0, 6).forEach((r) => {
+      const li = document.createElement("li");
+      const b = el("button");
+      b.type = "button";
+      b.appendChild(el("span", r.severidad === "ALTA" ? "Alta" : "Media", "etq " + (r.severidad || "")));
+      b.appendChild(el("span", `${etiquetaSede(r.sede)} · ${etiquetaServicio(r.servicio)} · ${r.ymes || r.periodo_fin || ""}` +
+        (r.bimestral ? " · bimestral" : "")));
+      const v = Number(r.variacion);
+      b.appendChild(el("span", Number.isFinite(v) ? `${v > 0 ? "+" : ""}${(v * 100).toFixed(0)} %` : "", "var " + (v > 0 ? "sube" : "baja")));
+      b.addEventListener("click", () => abrirDetalle(r));
+      li.appendChild(b);
+      lista.appendChild(li);
+    });
+    caja.appendChild(lista);
+  }
+
+  // ---------- graficos de valor y atipicos ----------
+  const COLOR_ASEO = "#8d6e63";
+  const PARTES = [["energia", "Energía", () => css("--energia")], ["acueducto", "Acueducto", () => css("--agua")],
+    ["aseo", "Aseo", () => COLOR_ASEO]];
+  // Valor de una fila separado en componentes: servicio (energia/acueducto) y aseo.
+  function componentes(r) {
+    const aseo = Number(r.valor_aseo) || 0;
+    const total = Number(r.valor) || 0;
+    const servicio = r.valor_servicio !== null && r.valor_servicio !== undefined ? Number(r.valor_servicio) : total - aseo;
+    return { [r.servicio]: servicio, aseo };
+  }
+
+  function apilado(id, categorias, series, opciones) {
+    const nodo = $(id);
+    if (!categorias.length) {
+      if (instancias[id]) { instancias[id].dispose(); delete instancias[id]; }
+      vaciar(nodo);
+      nodo.appendChild(el("p", "Sin datos para los filtros elegidos.", "vacio"));
+      return;
+    }
+    if (nodo.querySelector(".vacio")) vaciar(nodo);
+    const chart = instancia(id);
+    if (!chart) return;
+    mesesDe[id] = opciones.meses ? categorias : undefined;
+    const texto = css("--texto"), suave = css("--suave"), borde = css("--borde");
+    const horizontal = !!opciones.horizontal;
+    const eje = { type: "category", data: categorias, axisLabel: { color: suave, rotate: !horizontal && categorias.length > 8 ? 45 : 0 },
+      axisLine: { lineStyle: { color: borde } }, axisTick: { show: false }, inverse: horizontal };
+    const val = { type: "value", axisLabel: { color: suave, formatter: (v) => compacto.format(v) }, splitLine: { lineStyle: { color: borde } } };
+    chart.setOption({
+      animationDuration: 400, textStyle: { color: texto },
+      color: series.map((x) => x.color),
+      legend: { top: 0, textStyle: { color: suave }, itemWidth: 12, itemHeight: 8 },
+      grid: { left: horizontal ? 120 : 52, right: 16, top: 30, bottom: horizontal ? 16 : 40 },
+      tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: css("--tarjeta"), borderColor: borde,
+        textStyle: { color: texto }, valueFormatter: (v) => opciones.formato(v) },
+      xAxis: horizontal ? val : eje, yAxis: horizontal ? eje : val,
+      series: series.map((x) => ({ name: x.nombre, type: "bar", stack: "t", barMaxWidth: 34, cursor: opciones.meses ? "pointer" : "default",
+        itemStyle: { color: x.color }, data: x.datos })),
+    }, true);
+    chart.resize();
+  }
+
+  function graficoValorMes(filas) {
+    const por = {};
+    filtradas(true).filter((r) => r.ymes).forEach((r) => {
+      const m = (por[r.ymes] = por[r.ymes] || {});
+      Object.entries(componentes(r)).forEach(([k, v]) => { m[k] = (m[k] || 0) + v; });
+    });
+    const meses = Object.keys(por).sort();
+    apilado("g-valor", meses, PARTES.map(([k, nombre, color]) => ({ nombre, color: color(),
+      datos: meses.map((m) => Math.round(por[m][k] || 0)) })), { meses: true, formato: (v) => fmtMoneda.format(v) });
+  }
+
+  function graficoAtipicosMes(filas) {
+    const por = {};
+    filtradas(true).filter((r) => r.ymes && esAtipico(r)).forEach((r) => {
+      const m = (por[r.ymes] = por[r.ymes] || { ALTA: 0, MEDIA: 0 });
+      m[r.severidad === "ALTA" ? "ALTA" : "MEDIA"] += 1;
+    });
+    const meses = Object.keys(por).sort();
+    apilado("g-atipicos", meses, [
+      { nombre: "Alta", color: css("--alta"), datos: meses.map((m) => por[m].ALTA) },
+      { nombre: "Media", color: css("--media"), datos: meses.map((m) => por[m].MEDIA) }],
+      { meses: true, formato: (v) => fmt.format(v) });
+  }
+
+  function graficoValorPor(id, filas, campo) {
+    const por = {};
+    filas.forEach((r) => {
+      const clave = campo === "sede" ? etiquetaSede(r[campo]) : r[campo] || "—";
+      const m = (por[clave] = por[clave] || {});
+      Object.entries(componentes(r)).forEach(([k, v]) => { m[k] = (m[k] || 0) + v; });
+    });
+    const total = (m) => Object.values(m).reduce((a, b) => a + b, 0);
+    const nombres = Object.keys(por).sort((a, b) => total(por[b]) - total(por[a])).slice(0, 10);
+    apilado(id, nombres, PARTES.map(([k, nombre, color]) => ({ nombre, color: color(),
+      datos: nombres.map((n) => Math.round(por[n][k] || 0)) })), { horizontal: true, formato: (v) => fmtMoneda.format(v) });
   }
 
   function aviso() {
@@ -506,6 +629,8 @@
     const chart = instancia(id);
     if (!chart) return;
     mesesDe[id] = meses;
+    const atipMes = {};
+    filas.forEach((r) => { if (esAtipico(r)) atipMes[r.ymes] = (atipMes[r.ymes] || 0) + 1; });
     const maxMed = Math.max(1, ...meses.map((m) => medidores[m].size));
     const enRango = (m) => (F.desde === TODOS || m >= F.desde) && (F.hasta === TODOS || m <= F.hasta);
     const u = unidad === "kWh" ? "kWh" : "m³";
@@ -520,7 +645,8 @@
         formatter: (ps) => {
           const m = meses[ps[0].dataIndex];
           const parcial = medidores[m].size / maxMed < 0.6 ? "<br><i>Cobertura parcial del mes</i>" : "";
-          return `<b>${escapar(m)}</b><br>${fmt.format(por[m])} ${u}<br>${medidores[m].size} medidores con factura${parcial}`;
+          return `<b>${escapar(m)}</b><br>${fmt.format(por[m])} ${u}<br>${medidores[m].size} medidores con factura${parcial}` +
+            (atipMes[m] ? `<br><b style="color:${css("--alta")}">${atipMes[m]} atípicos</b>` : "");
         },
       },
       xAxis: { type: "category", data: meses, axisLabel: { color: suave, rotate: meses.length > 8 ? 45 : 0 },
@@ -537,7 +663,8 @@
         emphasis: { itemStyle: { shadowBlur: 8, shadowColor: "rgba(0,0,0,.25)" } },
         data: meses.map((m) => ({
           value: por[m],
-          itemStyle: { opacity: (enRango(m) ? 1 : 0.28) * (medidores[m].size / maxMed < 0.6 ? 0.6 : 1) },
+          itemStyle: { opacity: (enRango(m) ? 1 : 0.28) * (medidores[m].size / maxMed < 0.6 ? 0.6 : 1),
+            borderColor: atipMes[m] ? css("--alta") : "transparent", borderWidth: atipMes[m] ? 2 : 0 },
         })),
       }],
     }, true);
@@ -839,6 +966,7 @@
       { t: "Servicio", v: (r) => r.servicio },
       { t: "Periodo", v: (r) => r.periodo_fin },
       { t: "Factura", v: (r) => r.factura },
+      { t: "Cuenta", v: (r) => r.cuenta },
       colConsumo,
       { t: "Detalle", v: (r) => r.detalle },
     ], visibles, "Sin hallazgos para los filtros elegidos.", abrirDetalle));
@@ -869,9 +997,11 @@
       { t: "Prestador", v: (r) => r.prestador },
       { t: "Servicio", v: (r) => r.servicio },
       { t: "Factura", v: (r) => r.factura },
-      { t: "Periodo", v: (r) => r.periodo_fin },
+      { t: "Cuenta", v: (r) => r.cuenta },
+      { t: "Periodo", v: (r) => r.periodo_fin + (r.bimestral ? " (bim.)" : "") },
       colConsumo,
       { t: "Valor", v: (r) => (r.valor === null ? "" : fmtMoneda.format(r.valor)), num: true },
+      { t: "Aseo", v: (r) => (Number(r.valor_aseo) > 0 ? fmtMoneda.format(r.valor_aseo) : ""), num: true },
       { t: "Estado", v: (r) => etiquetaEstado(r.estado) },
     ], visibles, "Sin facturas para los filtros y la búsqueda.", abrirDetalle));
   }
@@ -958,6 +1088,7 @@
     const stats = el("div", null, "ficha-stats");
     [[`Consumo`, r.consumo === null ? "—" : `${fmt.format(r.consumo)} ${etiquetaUnidad(r.unidad)}`, iconoServicio(r.servicio)],
       ["Valor facturado", r.valor === null ? "—" : fmtMoneda.format(r.valor), "valor"],
+      ...(Number(r.valor_aseo) > 0 ? [["Del cual aseo", fmtMoneda.format(r.valor_aseo), "aseo"]] : []),
       ["Periodo", `${r.periodo_inicio || "?"} → ${r.periodo_fin || "?"}`, "calendario"]].forEach(([t, v, ic]) => {
       const c = el("div", null, "ficha-stat");
       const i = el("span", null, "kpi-ico");
@@ -994,9 +1125,11 @@
       cuerpo.appendChild(sec);
     }
     seccion("Identificación", "archivo", [["Factura", r.factura], ["Prestador", r.prestador], ["Servicio", etiquetaServicio(r.servicio)],
-      ["Sede", etiquetaSede(r.sede)], ["Dirección", r.direccion], ["Cuenta / medidor", r.cuenta]]);
+      ["Sede", etiquetaSede(r.sede)], ["Dirección", r.direccion], ["Cuenta / contrato", r.cuenta],
+      ["Periodicidad", r.bimestral ? `Bimestral (${r.dias || "?"} días)` : "Mensual"]]);
     seccion("Validación", "escudo", [["Estado", etiquetaEstado(r.estado)], ["Severidad", r.severidad],
-      ["Detalle", r.detalle], ["Revisión", r.revision]]);
+      ["Detalle", r.detalle], ["Consumo de referencia", r.consumo_ref === null || r.consumo_ref === undefined ? null : `${fmt.format(r.consumo_ref)} ${etiquetaUnidad(r.unidad)}/mes (${r.metodo_ref})`],
+      ["Revisión", r.revision]]);
 
     const pie = $("ficha-archivo");
     vaciar(pie);
@@ -1014,7 +1147,7 @@
   function descargar() {
     const filas = buscar(filtradas(false), $("buscar").value);
     const cols = ["sede", "prestador", "servicio", "factura", "cuenta", "periodo_inicio",
-      "periodo_fin", "consumo", "unidad", "valor", "estado", "severidad", "detalle", "archivo"];
+      "periodo_fin", "bimestral", "consumo", "unidad", "valor", "valor_servicio", "valor_aseo", "estado", "severidad", "detalle", "archivo"];
     const csv = [cols.join(",")].concat(filas.map((r) => cols.map((c) => celdaCsv(r[c])).join(","))).join("\r\n");
     const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");
