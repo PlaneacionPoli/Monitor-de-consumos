@@ -44,7 +44,7 @@ UMBRAL_TEXTO = 50           # menos caracteres => PDF escaneado (requiere OCR)
 OK, PENDIENTE, ERROR, OMITIDA = "OK", "PENDIENTE", "ERROR", "OMITIDA"   # OMITIDA: fuera de alcance
 
 # Subir esta version cuando cambie cualquier extractor: la app reprocesa lo anterior.
-VERSION_EXTRACTORES = "2026.10.2"
+VERSION_EXTRACTORES = "2026.10.3"
 
 NOMBRES_PRESTADOR = {
     "enel": "Enel", "eaab": "Acueducto de Bogotá", "afinia": "Afinia",

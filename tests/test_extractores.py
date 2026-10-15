@@ -21,6 +21,7 @@ from src.extractor.prestadores_csu import (  # noqa: E402
     _barcode_total,
     _parse_dmy,
     extraer_afinia,
+    extraer_aire,
     extraer_villavicencio,
 )
 from src.processor.batch_epm import normalizar_periodo_epm  # noqa: E402
@@ -336,3 +337,14 @@ def test_eaab_consumo_desde_medidor_no_historico():
              "(3900)000010394060\n1250000\n43.103\n1124\n27516\n26266\n"
              "Consumo Normal\n0\n")
     assert extraer_eaab(texto, "m.pdf")["consumo_m3"] == 1250.0
+
+
+def test_aire_consumo_desde_lecturas():
+    # Barranquilla: los dos "kWh" son lectura inicial/final; consumo = diferencia
+    texto = ("Codigo Interno:\nFactura No.:\n1025123\n6099542\n"
+             "31/12/2025 a 29/01/2026\n624.00\n22.566,00 kWh\n23.190,00 kWh\n")
+    datos = extraer_aire(texto, "m.pdf")
+    assert datos["consumo_kwh"] == 624.0
+    # sin lecturas legibles: valor suelto repetido (formato US con coma de miles)
+    texto = "Factura No.:\n0\n854.00\n1.00\n854.00\n173.00\n854.00\nfin\n"
+    assert extraer_aire(texto, "m.pdf")["consumo_kwh"] == 854.0

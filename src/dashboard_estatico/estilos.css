@@ -368,3 +368,6 @@ dialog#detalle[open]{animation:pop .22s ease-out}
 #tarjeta-mapa{margin:1rem 0}
 .mapa-ec{height:540px;border-radius:10px;background:#F7FBFD}
 @media(max-width:640px){.mapa-ec{height:380px}}
+
+.leyenda-mapa{display:flex;flex-wrap:wrap;gap:.4rem 1rem;margin:.5rem 0;font-size:.8rem;color:#263A58}
+.leyenda-mapa i{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;margin-right:.35rem;vertical-align:-1px}

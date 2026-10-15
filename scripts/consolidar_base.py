@@ -69,7 +69,9 @@ def normalizar(df: pd.DataFrame, servicio_por_defecto: str) -> pd.DataFrame:
         unidad = "kWh"
         if consumo is None:
             consumo = _numero(r, ["consumo_m3", "CONSUMO M3"])
-            unidad = "m3"
+            # sin consumo en ninguna columna, la unidad la da el servicio (no "m3" por defecto)
+            es_energia = str(r.get("servicio") or servicio_por_defecto).lower().startswith("energ")
+            unidad = "kWh" if consumo is None and es_energia else "m3"
         valor = _numero(r, ["valor_factura", "VALOR FACT.", "valor_total", "VALOR TOTAL"])
         # El aseo viaja dentro del recibo (EPM, Enel, Triple A): se separa del servicio.
         aseo = _numero(r, ["valor_aseo", "VALOR ASEO", "RECOLECCION BASURAS"]) or 0.0

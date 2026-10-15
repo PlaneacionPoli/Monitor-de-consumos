@@ -317,6 +317,10 @@ def extraer_aire(texto: str, nombre_archivo: str = "") -> Dict[str, Any]:
         texto, r"Credito/Otro\s*\n\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}\s*\n([A-Z0-9]+)")
     datos["referencia_pago"] = _buscar(texto, r"Referencia de pago\s*\n(\d+)")
     datos["niu"] = _buscar(texto, r"(\d{10})\s*\nFactura generada")
+    if not datos["niu"]:   # el orden del texto cambia entre facturas: NIU = el de 10 digitos mas repetido
+        diez = re.findall(r"\n(\d{10})\n", texto)
+        if diez:
+            datos["niu"] = max(set(diez), key=diez.count)
 
     venc = re.search(
         r"Fecha vencimiento\s*\nValor a pagar\s*\n(\d{2}/\d{2}/\d{4})\s*\n"
@@ -340,7 +344,29 @@ def extraer_aire(texto: str, nombre_archivo: str = "") -> Dict[str, Any]:
 
     candidatos = re.findall(r"([\d\.,]+ kWh)", texto)
     datos["consumo_candidatos"] = candidatos
-    datos["_pendiente_visual"] = "factura vs codigo interno; consumo (2 candidatos)"
+    pendiente = "factura vs codigo interno"
+    # Los dos "kWh" del texto son lectura inicial y final del medidor (acumuladas,
+    # formato 22.566,00); el consumo facturado es su diferencia (factor 1). El mismo
+    # consumo aparece suelto en formato US ("1,103.00") varias veces en el texto.
+    sueltos = [float(v.replace(",", "")) for v in re.findall(r"(?<=\n)(\d[\d,]*\.00)(?=\n)", texto)]
+    lecturas = [_parse_moneda(c.replace(" kWh", "")) for c in candidatos[:2]]
+    consumo = None
+    if len(lecturas) == 2 and None not in lecturas and lecturas[1] >= lecturas[0]:
+        datos["lectura_anterior"], datos["lectura_actual"] = lecturas
+        consumo = round(lecturas[1] - lecturas[0], 2)
+        if consumo not in sueltos:
+            pendiente += "; consumo = lectura final - inicial, sin confirmar en el texto"
+    else:
+        # Sin lecturas legibles: el valor (>1) que mas se repite como numero suelto.
+        repetidos = [v for v in set(sueltos) if v and v > 1 and sueltos.count(v) >= 3]
+        if repetidos:
+            consumo = max(repetidos, key=sueltos.count)
+            pendiente += "; consumo tomado del valor repetido en el texto (sin lecturas)"
+        else:
+            pendiente += "; consumo no identificado"
+    if consumo is not None:
+        datos["consumo_kwh"] = consumo
+    datos["_pendiente_visual"] = pendiente
     return datos
 
 

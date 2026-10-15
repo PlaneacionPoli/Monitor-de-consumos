@@ -795,6 +795,15 @@
     [/VILLAVICENCIO/, "Villavicencio", -73.627, 4.142],
   ];
   const VISTAS_MAPA = { co: { center: null, zoom: 1 }, bog: { center: [-74.06, 4.66], zoom: 150 } };
+  // Color por sede (estable por nombre); todos los CSU comparten un mismo color.
+  const COLOR_CSU = "#E07B39";
+  const PALETA_SEDES = ["#1B9AAA", "#6A4C93", "#2E7D32", "#C2185B", "#3F51B5", "#8D6E63", "#00897B", "#F9A825"];
+  const esCSU = (sede) => /(^|[^A-Z])CSU[^A-Z]/.test(String(sede || "").toUpperCase() + " ");
+  const colorSede = (sede, todas) => {
+    if (esCSU(sede)) return COLOR_CSU;
+    const propias = [...new Set(todas.filter((x) => !esCSU(x)))].sort();
+    return PALETA_SEDES[propias.indexOf(sede) % PALETA_SEDES.length];
+  };
   const coordenadaSede = (sede) => {
     const t = String(sede || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     return COORDS_SEDES.find((c) => c[0].test(t)) || null;
@@ -837,12 +846,22 @@
       if (!c) { if (valor > 0) sinUbicar += 1; return; }
       puntos.push({ sede, valor, ciudad: c[1], lon: c[2], lat: c[3] });
     });
+    const nombresSedes = puntos.map((p) => p.sede);
+    puntos.forEach((p) => { p.color = colorSede(p.sede, nombresSedes); });
     puntos.sort((a, b) => b.valor - a.valor);   // las grandes se dibujan primero; las pequenas quedan encima
     const nota = $("p-mapa");
     nota.textContent = (puntos.length
       ? "Rueda del ratón o arrastre para acercar y mover; use «Bogotá» para separar Campus, City Campus y Calle 84. Clic en una burbuja filtra por esa sede."
       : "Sin datos para los filtros elegidos.") +
       (sinUbicar ? ` ${sinUbicar} sede(s) sin ubicación en el mapa.` : "");
+    let ley = $("l-mapa");
+    if (!ley) {
+      ley = document.createElement("div");
+      ley.id = "l-mapa"; ley.className = "leyenda-mapa";
+      nota.parentNode.insertBefore(ley, nota);
+    }
+    const entradas = [...new Map(puntos.map((p) => [esCSU(p.sede) ? "CSU (todos)" : etiquetaSede(p.sede), p.color])).entries()];
+    ley.innerHTML = entradas.map(([n, c]) => `<span><i style="background:${c}"></i>${n}</span>`).join("");
     const chart = instancia("g-mapa");
     if (!chart) return;
     const max = Math.max(...puntos.map((p) => p.valor), 1);
@@ -858,7 +877,7 @@
         },
         geo: {
           map: "CO", roam: true, scaleLimit: { min: 1, max: 400 },
-          boundingCoords: [[-79.4, 13.2], [-66.6, -4.4]], layoutCenter: ["50%", "50%"], layoutSize: "112%",
+          boundingCoords: [[-79.4, 13.2], [-66.6, -4.4]], layoutCenter: ["50%", "50%"], layoutSize: "112%", aspectScale: 1,
           center: vista.center || undefined, zoom: vista.zoom,
           itemStyle: { areaColor: "#E3F3FA", borderColor: "#9FCBE0", borderWidth: 0.6 },
           emphasis: { itemStyle: { areaColor: "#D2ECF7" }, label: { show: false } },
@@ -866,7 +885,7 @@
         },
         series: [{
           type: "scatter", coordinateSystem: "geo",
-          data: puntos.map((p) => ({ sede: p.sede, ciudad: p.ciudad, value: [p.lon, p.lat, p.valor] })),
+          data: puntos.map((p) => ({ sede: p.sede, ciudad: p.ciudad, value: [p.lon, p.lat, p.valor], itemStyle: { color: p.color } })),
           symbolSize: (v) => diametroBurbuja(v[2] / max, vista.zoom),
           itemStyle: { color, opacity: 0.8, borderColor: "#fff", borderWidth: 1.5 },
           label: {
