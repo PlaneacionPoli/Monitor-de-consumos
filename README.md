@@ -12,6 +12,7 @@
 
 El sistema procesa facturas en formato PDF e imágenes, extrae los datos relevantes mediante OCR y genera archivos Excel estructurados junto con un dashboard en tiempo real.
 
+
 ## Características
 
 - **Procesamiento automático**: Detecta nuevos archivos y los procesa automáticamente
