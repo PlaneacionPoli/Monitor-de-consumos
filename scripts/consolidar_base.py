@@ -115,6 +115,9 @@ def normalizar(df: pd.DataFrame, servicio_por_defecto: str) -> pd.DataFrame:
             "archivo": r.get("archivo_origen") or r.get("ARCHIVO ORIGEN"),
             "direccion": r.get("direccion") or r.get("DIRECCION"),
             "periodo_fuente": r.get("PERIODO FUENTE") or r.get("periodo_fuente"),
+            # El porque del dato dudoso (p. ej. consumo estimado por el prestador) viaja al dashboard.
+            "nota_consumo": (r.get("_pendiente_visual")
+                             if r.get("consumo_estimado") in (True, "True", "TRUE", 1) else None),
         })
     return pd.DataFrame(filas)
 

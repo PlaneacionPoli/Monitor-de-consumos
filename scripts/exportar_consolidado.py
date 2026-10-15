@@ -48,7 +48,7 @@ def mapa_sedes() -> dict:
     for _, r in cat.iterrows():
         sede = r["sede_confirmada"].strip() or r["sede_sugerida"].strip()
         if sede and sede != "SIN_MAPEO":
-            mapa[r["direccion_norm"]] = sede
+            mapa[r["direccion_norm"].upper()] = sede
     return mapa
 
 
@@ -56,7 +56,7 @@ def preparar(base: pd.DataFrame) -> pd.DataFrame:
     base = base.copy()
     direccion = (base["direccion"].astype(str)
                  .str.replace(r"\s*\|\s*\d+$", "", regex=True).str.strip())
-    base["sede_final"] = direccion.map(mapa_sedes()).fillna("Sin sede identificada")
+    base["sede_final"] = direccion.str.upper().map(mapa_sedes()).fillna("Sin sede identificada")
     base = completar_sede_por_cuenta(base, "Sin sede identificada")
     base["sede_final"] = base["sede_final"].fillna("Sin sede identificada").astype(str)
     base["servicio"] = base["servicio"].astype(str).str.replace("^energia$", "Energía", regex=True) \

@@ -20,7 +20,7 @@ SALIDAS = os.path.join(BASE, "data", "outputs")
 
 REGLAS = [
     (r"PENDIENTE", "SIN_MAPEO"),
-    (r"BELLO", "BELLO"),
+    (r"BELLO", "CSU BELLO"),
     (r"CR 74|CL 53|CR 73|CL 50.*70|CR 50", "MEDELLIN-LOS COLORES"),
     (r"CL 57", "BOGOTA-CAMPUS"),
     (r"CL 61", "BOGOTA-CITY CAMPUS"),
@@ -38,7 +38,7 @@ REGLAS = [
 
 
 CARPETA_SEDE = [
-    ("BELLO", "BELLO"),
+    ("BELLO", "CSU BELLO"),
     ("CAMPUS POLITECNICO", "BOGOTA-CAMPUS"),
     ("CITY CAMPUS", "BOGOTA-CITY CAMPUS"),
     ("CALLE 84", "BOGOTA-CALLE 84"),

@@ -788,6 +788,7 @@
     [/PORTAL 80/, "Bogotá", -74.1135, 4.7135],     // Tv 100A # 80A-20
     [/BOSA/, "Bogotá", -74.1900, 4.6100],          // Cl 65 # 78H Sur
     [/CAMPUS/, "Bogotá", -74.0636, 4.6410],        // Cl 57 # 3 Este-00 (sede principal)
+    [/BELLO/, "Bello", -75.5675, 6.3370],
     [/MEDELLIN|LOS COLORES/, "Medellín", -75.5950, 6.2620],
     [/CARTAGENA/, "Cartagena", -75.514, 10.391], [/BARRANQUILLA/, "Barranquilla", -74.796, 10.968],
     [/ZIPAQUIRA/, "Zipaquirá", -74.004, 5.022], [/CALI/, "Cali", -76.532, 3.452],
@@ -1157,6 +1158,7 @@
       { t: "Valor", v: (r) => (r.valor === null ? "" : fmtMoneda.format(r.valor)), num: true },
       { t: "Aseo", v: (r) => (Number(r.valor_aseo) > 0 ? fmtMoneda.format(r.valor_aseo) : ""), num: true },
       { t: "Estado", v: (r) => etiquetaEstado(r.estado) },
+      { t: "Comentario", v: (r) => r.detalle || "" },
     ], visibles, "Sin facturas para los filtros y la búsqueda.", abrirDetalle));
   }
 

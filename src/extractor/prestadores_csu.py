@@ -421,12 +421,30 @@ def extraer_emcali(texto: str, nombre_archivo: str = "") -> Dict[str, Any]:
         texto, r"Consumos Anteriores \(kWh\)\s*\nNo\. Medidor M1\s*\n([^\n]+)")
     lect = re.search(
         r"Lectura Actual\s*\n([\d\.,]+)\s*\nLectura Anterior\s*\n([\d\.,]+)\s*\n"
-        r"Diferencia\s*\n([\d\.,]+)\s*\nConsumo Actual\s*\n([\d\.,]+) KWH",
+        r"Diferencia\s*\n([\d\.,]+)\s*\n((?:(?!Consumo Actual)[^\n]*\n){0,4}?)"
+        r"Consumo Actual\s*\n([\d\.,]+) KWH",
         texto)
     if lect:
         energia["lectura_actual"] = _parse_moneda(lect.group(1))
         energia["lectura_anterior"] = _parse_moneda(lect.group(2))
-        energia["consumo_kwh"] = _parse_moneda(lect.group(4))
+        energia["consumo_kwh"] = _parse_moneda(lect.group(5))
+        # Entre "Diferencia" y "Consumo Actual" EmCali agrega observaciones cuando el
+        # consumo es estimado ("Consumo En Investigacion - Consumo Estimado"): el
+        # consumo facturado no coincide con la diferencia de lecturas.
+        observacion = " ".join(l.strip() for l in lect.group(4).splitlines() if l.strip())
+        if "ESTIMADO" in observacion.upper() or \
+                _parse_moneda(lect.group(3)) != energia["consumo_kwh"]:
+            energia["consumo_estimado"] = True
+            diferencia = _parse_moneda(lect.group(3))
+
+            def miles(x):
+                return f"{x:,.0f}".replace(",", ".")
+            energia["_pendiente_visual"] = (
+                f"Consumo estimado por el prestador: se facturaron {miles(energia['consumo_kwh'])} kWh, "
+                f"pero la diferencia de lecturas del medidor es {miles(diferencia)} kWh "
+                f"({miles(energia['lectura_actual'])} - {miles(energia['lectura_anterior'])})"
+                + (f". Observación en la factura: {observacion}" if observacion else "")
+                + ". Suele ajustarse en una factura posterior.")
     seccion_e = texto.split("ENERGIA", 1)[1] if "ENERGIA" in texto else ""
     total_e = re.search(r"TOTAL\s*\n\$([\d\.,]+)", seccion_e)
     energia["valor_factura"] = _parse_moneda(total_e.group(1)) if total_e else None

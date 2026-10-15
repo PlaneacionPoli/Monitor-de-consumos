@@ -22,6 +22,7 @@ from src.extractor.prestadores_csu import (  # noqa: E402
     _parse_dmy,
     extraer_afinia,
     extraer_aire,
+    extraer_emcali,
     extraer_villavicencio,
 )
 from src.processor.batch_epm import normalizar_periodo_epm  # noqa: E402
@@ -348,3 +349,14 @@ def test_aire_consumo_desde_lecturas():
     # sin lecturas legibles: valor suelto repetido (formato US con coma de miles)
     texto = "Factura No.:\n0\n854.00\n1.00\n854.00\n173.00\n854.00\nfin\n"
     assert extraer_aire(texto, "m.pdf")["consumo_kwh"] == 854.0
+
+
+def test_emcali_consumo_estimado_con_observacion():
+    # EmCali sep-2026: entre "Diferencia" y "Consumo Actual" hay observaciones de lectura
+    texto = ("ENERGIA\nLectura Actual\n73,142\nLectura Anterior\n72,800\nDiferencia\n342\n"
+             "Observacion de Lectura\n \nConsumo En Investigacion - Consumo Estimado\n"
+             "Consumo Actual\n1,079 KWH\nCONCEPTOS\nTOTAL\n$1,192,905.07\n")
+    energia = extraer_emcali(texto, "m.pdf")["energia"]
+    assert energia["consumo_kwh"] == 1079.0
+    assert energia["consumo_estimado"] is True
+    assert "342" in energia["_pendiente_visual"]

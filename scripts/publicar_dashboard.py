@@ -102,7 +102,7 @@ def mapa_sedes() -> dict:
     for _, r in cat.iterrows():
         sede = r["sede_confirmada"].strip() or r["sede_sugerida"].strip()
         if sede and sede != "SIN_MAPEO":
-            mapa[r["direccion_norm"]] = sede
+            mapa[r["direccion_norm"].upper()] = sede
     return mapa
 
 
@@ -129,7 +129,7 @@ def construir_datos() -> dict:
     estados = estados_almacen()
     direccion = (base["direccion"].astype(str)
                  .str.replace(r"\s*\|\s*\d+$", "", regex=True).str.strip())
-    base["sede_final"] = direccion.map(sedes).fillna("SIN_MAPEO")
+    base["sede_final"] = direccion.str.upper().map(sedes).fillna("SIN_MAPEO")
     base = completar_sede_por_cuenta(base, "SIN_MAPEO")
 
     def limpio(v):
