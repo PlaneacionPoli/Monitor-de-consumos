@@ -54,3 +54,12 @@ def test_menu_plegado_por_defecto_y_se_expande_solo_con_el_boton(monkeypatch):
 
     monkeypatch.setattr(m, "ctx", type("C", (), {"triggered_id": "url"})())
     assert m.menu(2, "/dashboard", "app abierto") == ("app", "false")  # elegir pagina pliega
+
+
+def test_dashboard_se_sirve_desde_site_sin_copias():
+    """/sitio/ entrega siempre lo que hay en site/ (una copia vieja daba 'credenciales incorrectas')."""
+    m = _cargar_app()
+    cliente = m.server.test_client()
+    esperado = open(os.path.join(BASE, "site", "data.enc.json"), "rb").read()
+    assert cliente.get("/sitio/data.enc.json").data == esperado
+    assert cliente.get("/sitio/index.html").status_code == 200

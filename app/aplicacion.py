@@ -208,12 +208,10 @@ app.layout = html.Div([
 # --------------------------------------------------------------------------- servidor
 @server.route("/sitio/<path:ruta>")
 def sitio(ruta):
-    """Sirve la copia local del dashboard HTML oficial (site/)."""
-    if not os.path.isfile(os.path.join(actualizacion.SITIO_LOCAL, "index.html")):
-        actualizacion.copiar_dashboard_local()
-    if not os.path.isdir(actualizacion.SITIO_LOCAL):
+    """Sirve site/ (dashboard HTML oficial) directamente, sin copias: siempre es la version actual."""
+    if not os.path.isfile(os.path.join(actualizacion.SITIO, "index.html")):
         abort(404)
-    return send_from_directory(actualizacion.SITIO_LOCAL, ruta, max_age=0)
+    return send_from_directory(actualizacion.SITIO, ruta, max_age=0)
 
 
 def _dialogo(tipo):
@@ -427,7 +425,6 @@ def regenerar(n):
                        text=True, encoding="utf-8", errors="replace")
     if r.returncode != 0:
         return html.Div(actualizacion._aviso_dashboard((r.stderr or r.stdout)[-1200:]), className="aviso error")
-    actualizacion.copiar_dashboard_local()
     return html.Div("Dashboard actualizado. Recarga la página para verlo.", className="aviso ok")
 
 

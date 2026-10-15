@@ -75,7 +75,6 @@ def actualizar(avance: Optional[Callable[[int, int, str], None]] = None) -> Dict
                 avisos.append(_aviso_dashboard(detalle))
                 continue
             return {"ok": False, "libro": None, "etapa_fallida": nombre, "detalle": detalle}
-    copiar_dashboard_local()
     if avance:
         avance(total, total, "Listo")
     return {"ok": True, "libro": LIBRO_FINAL, "etapa_fallida": None, "detalle": "", "avisos": avisos}
