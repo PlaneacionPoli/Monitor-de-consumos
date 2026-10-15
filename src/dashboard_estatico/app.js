@@ -31,6 +31,8 @@
   let vista = "ejecutiva";
   let tab = "cola";
   let unidadSede = "kWh";
+  let unidadMapa = "valor";
+  let geoColombia = null;
   const pag = { cola: 0, facturas: 0 };
   // Filtros globales. desde/hasta = "AAAA-MM". estado se fija desde el grafico.
   const F = { servicio: TODOS, sede: TODOS, prestador: TODOS, desde: TODOS, hasta: TODOS, estado: TODOS };
@@ -379,9 +381,9 @@
     const meses = unicos("ymes");
     llenar("f-desde", meses);
     llenar("f-hasta", meses);
-    llenar("f-hallazgo", ["ALTA", "MEDIA", "SIN_SERIE", "REVISION_BAJA_CONFIANZA",
+    llenar("f-hallazgo", ["AUMENTO", "CAIDA", "ALTA", "MEDIA", "SIN_SERIE", "REVISION_BAJA_CONFIANZA",
       "REVISION_PERIODO_INFERIDO", "REVISION_UNIDAD"], (v) =>
-      v === "ALTA" ? "Atípico · severidad alta" : v === "MEDIA" ? "Atípico · severidad media" : etiquetaEstado(v));
+      v === "AUMENTO" ? "Atípico · aumento" : v === "CAIDA" ? "Atípico · caída" : v === "ALTA" ? "Atípico · severidad alta" : v === "MEDIA" ? "Atípico · severidad media" : etiquetaEstado(v));
     crearCombos();
     renderizar();
   }
@@ -403,6 +405,7 @@
     graficoMensual("g-energia", "kWh", css("--energia"));
     graficoMensual("g-agua", "m3", css("--agua"));
     graficoSedes(filas);
+    graficoMapa(filas);
     calidad(filas);
     graficoValorMes(filas);
     graficoAtipicosMes(filas);
@@ -423,21 +426,22 @@
     const h = el("h2", `${fmt.format(atip.length)} facturas con consumo atípico`, "con-icono");
     h.insertBefore(icono("alerta"), h.firstChild);
     cab.appendChild(h);
+    const nAum = atip.filter((r) => r.sentido === "AUMENTO").length;
     const ver = el("button", "Ver todas en Operativa", "secundario chico-btn");
     ver.type = "button";
     ver.addEventListener("click", () => { hallazgo = altas.length ? "ALTA" : "MEDIA"; $("f-hallazgo").value = hallazgo; cambiarVista("operativa"); });
     cab.appendChild(ver);
     caja.appendChild(cab);
     caja.appendChild(el("p",
-      `${fmt.format(altas.length)} de severidad alta (más de 50 % de variación) y ${fmt.format(atip.length - altas.length)} media (más de 20 %). ` +
-      "Los atípicos no entran en la mediana ni en el valor de referencia de los periodos siguientes, y los recibos bimestrales se comparan por mes.",
+      `${fmt.format(nAum)} aumentos y ${fmt.format(atip.length - nAum)} caídas. ${fmt.format(altas.length)} de severidad alta (más de 50 % de variación) y ${fmt.format(atip.length - altas.length)} media (más de 20 %). ` +
+      "Se compara el consumo por día contra la mediana robusta de la serie y de los pares del mes (la estacionalidad común no se marca). Los atípicos no entran en la referencia y en un cambio de nivel sostenido la alerta no se repite.",
       "suave pequeno"));
     const lista = document.createElement("ul");
     atip.slice().sort((a, b) => Math.abs(b.variacion || 0) - Math.abs(a.variacion || 0)).slice(0, 6).forEach((r) => {
       const li = document.createElement("li");
       const b = el("button");
       b.type = "button";
-      b.appendChild(el("span", r.severidad === "ALTA" ? "Alta" : "Media", "etq " + (r.severidad || "")));
+      b.appendChild(el("span", `${etiquetaSentido(r)} · ${r.severidad === "ALTA" ? "alta" : "media"}`, "etq " + (r.severidad || "")));
       b.appendChild(el("span", `${etiquetaSede(r.sede)} · ${etiquetaServicio(r.servicio)} · ${r.ymes || r.periodo_fin || ""}` +
         (r.bimestral ? " · bimestral" : "")));
       const v = Number(r.variacion);
@@ -506,13 +510,13 @@
   function graficoAtipicosMes(filas) {
     const por = {};
     filtradas(true).filter((r) => r.ymes && esAtipico(r)).forEach((r) => {
-      const m = (por[r.ymes] = por[r.ymes] || { ALTA: 0, MEDIA: 0 });
-      m[r.severidad === "ALTA" ? "ALTA" : "MEDIA"] += 1;
+      const m = (por[r.ymes] = por[r.ymes] || { AUMENTO: 0, CAIDA: 0 });
+      m[r.sentido === "CAIDA" ? "CAIDA" : "AUMENTO"] += 1;
     });
     const meses = Object.keys(por).sort();
     apilado("g-atipicos", meses, [
-      { nombre: "Alta", color: css("--alta"), datos: meses.map((m) => por[m].ALTA) },
-      { nombre: "Media", color: css("--media"), datos: meses.map((m) => por[m].MEDIA) }],
+      { nombre: "Aumentos", color: css("--alta"), datos: meses.map((m) => por[m].AUMENTO) },
+      { nombre: "Caídas", color: css("--info"), datos: meses.map((m) => por[m].CAIDA) }],
       { meses: true, formato: (v) => fmt.format(v) });
   }
 
@@ -532,11 +536,11 @@
   function aviso() {
     const caja = $("aviso");
     const atip = datos.facturas.filter((r) => r.estado === "ATIPICO_REVISAR");
-    const med3 = atip.filter((r) => (r.detalle || "").includes("(mediana3)")).length;
+    const med3 = atip.filter((r) => (r.detalle || "").includes("serie corta")).length;
     if (atip.length && med3 / atip.length > 0.5) {
       caja.textContent =
-        `${fmt.format(med3)} de ${fmt.format(atip.length)} atípicos se calcularon con la mediana de los 3 periodos previos, ` +
-        "porque aún no hay 12 meses de histórico. Úselos para priorizar la revisión, no como diagnóstico.";
+        `${fmt.format(med3)} de ${fmt.format(atip.length)} atípicos están en series de menos de 6 periodos, ` +
+        "con poca historia para estimar el comportamiento normal. Úselos para priorizar la revisión, no como diagnóstico.";
       caja.hidden = false;
     } else {
       caja.hidden = true;
@@ -761,6 +765,120 @@
     caja.appendChild(lista);
   }
 
+
+  // ---------- mapa de sedes (contorno DANE en colombia.geojson) ----------
+  // [patron del nombre de sede (sin tildes, mayusculas), ciudad, longitud, latitud]; el orden importa.
+  // Ubicacion por la direccion de cada sede (catalogo_sedes.csv), a nivel de calle; los CSU, por ciudad.
+  const COORDS_SEDES = [
+    [/CITY CAMPUS/, "Bogotá", -74.0620, 4.6475],   // Cl 61 # 7-69
+    [/CALLE 84/, "Bogotá", -74.0545, 4.6700],      // Kr 19 # 84-72
+    [/PORTAL 80/, "Bogotá", -74.1135, 4.7135],     // Tv 100A # 80A-20
+    [/BOSA/, "Bogotá", -74.1900, 4.6100],          // Cl 65 # 78H Sur
+    [/CAMPUS/, "Bogotá", -74.0636, 4.6410],        // Cl 57 # 3 Este-00 (sede principal)
+    [/MEDELLIN|LOS COLORES/, "Medellín", -75.5950, 6.2620],
+    [/CARTAGENA/, "Cartagena", -75.514, 10.391], [/BARRANQUILLA/, "Barranquilla", -74.796, 10.968],
+    [/ZIPAQUIRA/, "Zipaquirá", -74.004, 5.022], [/CALI/, "Cali", -76.532, 3.452],
+    [/CHIA/, "Chía", -74.0586, 4.8582], [/SOACHA/, "Soacha", -74.2168, 4.5791],
+    [/VILLAVICENCIO/, "Villavicencio", -73.627, 4.142],
+  ];
+  const VISTAS_MAPA = { co: { center: null, zoom: 1 }, bog: { center: [-74.06, 4.66], zoom: 150 } };
+  const coordenadaSede = (sede) => {
+    const t = String(sede || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return COORDS_SEDES.find((c) => c[0].test(t)) || null;
+  };
+
+  function cargarGeoColombia() {
+    if (geoColombia) return Promise.resolve(geoColombia);
+    return fetch("colombia.geojson").then((r) => r.json()).then((j) => {
+      window.echarts.registerMap("CO", j);
+      geoColombia = j;
+      return j;
+    });
+  }
+
+  // Diametro de la burbuja: crece con el valor y se achica al acercar para que sedes vecinas no se tapen.
+  const diametroBurbuja = (rel, zoom) => Math.max(9, (14 + 40 * Math.sqrt(Math.max(rel, 0))) * (zoom >= 40 ? 0.4 : zoom >= 8 ? 0.65 : 1));
+
+  function irAVista(clave) {
+    const chart = instancias["g-mapa"];
+    if (!chart) return;
+    const v = VISTAS_MAPA[clave];
+    chart.__vista = { center: v.center, zoom: v.zoom };
+    chart.setOption({ geo: { center: v.center, zoom: v.zoom }, series: [{ symbolSize: chart.__tamano(v.zoom) }] });
+  }
+
+  function graficoMapa(filas) {
+    const medida = unidadMapa;
+    const rotulo = medida === "valor" ? "Valor facturado ($)" : medida === "kWh" ? "Consumo de energía (kWh)" : "Consumo de agua (m³)";
+    $("t-mapa").lastChild.textContent = ` Mapa de sedes · ${rotulo}`;
+    const por = {};
+    filas.forEach((r) => {
+      if (medida !== "valor" && r.unidad !== medida) return;
+      const v = medida === "valor" ? Number(r.valor) || 0 : Number(r.consumo) || 0;
+      por[r.sede] = (por[r.sede] || 0) + v;
+    });
+    const puntos = [];
+    let sinUbicar = 0;
+    Object.entries(por).forEach(([sede, valor]) => {
+      const c = coordenadaSede(sede);
+      if (!c) { if (valor > 0) sinUbicar += 1; return; }
+      puntos.push({ sede, valor, ciudad: c[1], lon: c[2], lat: c[3] });
+    });
+    puntos.sort((a, b) => b.valor - a.valor);   // las grandes se dibujan primero; las pequenas quedan encima
+    const nota = $("p-mapa");
+    nota.textContent = (puntos.length
+      ? "Rueda del ratón o arrastre para acercar y mover; use «Bogotá» para separar Campus, City Campus y Calle 84. Clic en una burbuja filtra por esa sede."
+      : "Sin datos para los filtros elegidos.") +
+      (sinUbicar ? ` ${sinUbicar} sede(s) sin ubicación en el mapa.` : "");
+    const chart = instancia("g-mapa");
+    if (!chart) return;
+    const max = Math.max(...puntos.map((p) => p.valor), 1);
+    const color = medida === "valor" ? css("--acento") : medida === "kWh" ? css("--energia") : css("--agua");
+    const formato = (v) => (medida === "valor" ? fmtMoneda.format(v) : `${fmt.format(v)} ${medida === "kWh" ? "kWh" : "m³"}`);
+    const vista = chart.__vista || VISTAS_MAPA.co;
+    cargarGeoColombia().then(() => {
+      chart.setOption({
+        tooltip: {
+          trigger: "item",
+          formatter: (p) => (p.data && p.data.sede
+            ? `<b>${etiquetaSede(p.data.sede)}</b><br>${p.data.ciudad} · ${formato(p.data.value[2])}` : ""),
+        },
+        geo: {
+          map: "CO", roam: true, scaleLimit: { min: 1, max: 400 },
+          boundingCoords: [[-79.4, 13.2], [-66.6, -4.4]], layoutCenter: ["50%", "50%"], layoutSize: "112%",
+          center: vista.center || undefined, zoom: vista.zoom,
+          itemStyle: { areaColor: "#E3F3FA", borderColor: "#9FCBE0", borderWidth: 0.6 },
+          emphasis: { itemStyle: { areaColor: "#D2ECF7" }, label: { show: false } },
+          select: { disabled: true },
+        },
+        series: [{
+          type: "scatter", coordinateSystem: "geo",
+          data: puntos.map((p) => ({ sede: p.sede, ciudad: p.ciudad, value: [p.lon, p.lat, p.valor] })),
+          symbolSize: (v) => diametroBurbuja(v[2] / max, vista.zoom),
+          itemStyle: { color, opacity: 0.8, borderColor: "#fff", borderWidth: 1.5 },
+          label: {
+            show: true, position: "right", distance: 6, color: "#263A58", fontSize: 11, fontWeight: 600,
+            formatter: (p) => etiquetaSede(p.data.sede).replace(/^(BOGOTA|MEDELLIN)-/, ""),
+            textBorderColor: "#fff", textBorderWidth: 3,
+          },
+          labelLayout: { hideOverlap: true },
+          emphasis: { scale: 1.15, itemStyle: { opacity: 1 } },
+        }],
+      }, true);
+      chart.__tamano = (zoom) => (v) => diametroBurbuja(v[2] / max, zoom);
+      if (!chart.__eventosMapa) {
+        chart.__eventosMapa = true;
+        chart.on("click", (p) => { if (p.data && p.data.sede) fijar("sede", p.data.sede); });
+        chart.on("georoam", () => {    // recuerda el encuadre para no perderlo al filtrar
+          const g = chart.getOption().geo[0];
+          chart.__vista = { center: g.center, zoom: g.zoom };
+          chart.setOption({ series: [{ symbolSize: chart.__tamano(g.zoom) }] });
+        });
+      }
+      chart.resize();
+    }).catch(() => { nota.textContent = "No se pudo cargar el contorno del mapa."; });
+  }
+
   // Calidad de los datos: barra apilada + leyenda clicable (filtra por estado).
   function calidad(filas) {
     const cuenta = contar(filas, "estado");
@@ -892,9 +1010,11 @@
   }
 
   const esAtipico = (r) => r.estado === "ATIPICO_REVISAR";
+  const etiquetaSentido = (r) => (r.sentido === "CAIDA" ? "Caída" : r.sentido === "AUMENTO" ? "Aumento" : "Atípico");
   function coincideHallazgo(r) {
     if (hallazgo === TODOS) return r.estado !== "OK";
     if (hallazgo === "ALTA" || hallazgo === "MEDIA") return esAtipico(r) && r.severidad === hallazgo;
+    if (hallazgo === "AUMENTO" || hallazgo === "CAIDA") return esAtipico(r) && r.sentido === hallazgo;
     return r.estado === hallazgo;
   }
 
@@ -904,6 +1024,8 @@
     vaciar(caja);
     const items = [
       [TODOS, "Por revisar", filas.filter((r) => r.estado !== "OK").length],
+      ["AUMENTO", "Aumentos", filas.filter((r) => esAtipico(r) && r.sentido === "AUMENTO").length],
+      ["CAIDA", "Caídas", filas.filter((r) => esAtipico(r) && r.sentido === "CAIDA").length],
       ["ALTA", "Atípicos · alta", filas.filter((r) => esAtipico(r) && r.severidad === "ALTA").length],
       ["MEDIA", "Atípicos · media", filas.filter((r) => esAtipico(r) && r.severidad === "MEDIA").length],
       ["SIN_SERIE", "Sin medidor", filas.filter((r) => r.estado === "SIN_SERIE").length],
@@ -914,7 +1036,7 @@
       b.type = "button";
       b.setAttribute("aria-pressed", String(hallazgo === clave));
       const ic = el("span", null, "kpi-ico");
-      ic.appendChild(icono({ ALTA: "alerta", MEDIA: "alerta", SIN_SERIE: "gauge", REVISION_BAJA_CONFIANZA: "escudo" }[clave] || "revision"));
+      ic.appendChild(icono({ AUMENTO: "tendencia", CAIDA: "tendencia", ALTA: "alerta", MEDIA: "alerta", SIN_SERIE: "gauge", REVISION_BAJA_CONFIANZA: "escudo" }[clave] || "revision"));
       b.appendChild(ic);
       b.appendChild(el("div", titulo, "suave pequeno"));
       b.appendChild(el("div", fmt.format(n), "valor"));
@@ -961,7 +1083,7 @@
     const caja = $("t-cola");
     vaciar(caja);
     caja.appendChild(tabla([
-      { t: "Hallazgo", v: (r) => (esAtipico(r) ? `Atípico ${(r.severidad || "").toLowerCase()}` : etiquetaEstado(r.estado)), tipo: "etq" },
+      { t: "Hallazgo", v: (r) => (esAtipico(r) ? `${etiquetaSentido(r)} ${(r.severidad || "").toLowerCase()}` : etiquetaEstado(r.estado)), tipo: "etq" },
       { t: "Sede", v: (r) => r.sede },
       { t: "Servicio", v: (r) => r.servicio },
       { t: "Periodo", v: (r) => r.periodo_fin },
@@ -1079,7 +1201,7 @@
     $("detalle-titulo").textContent = !r.factura || /no identificado/i.test(r.factura) ? "Factura sin número identificado" : `Factura ${r.factura}`;
     $("ficha-sub").textContent = [r.prestador, etiquetaServicio(r.servicio), etiquetaSede(r.sede)].filter(Boolean).join(" · ");
     const insignia = $("ficha-estado");
-    insignia.textContent = esAtipico(r) && r.severidad ? `Atípico · ${String(r.severidad).toLowerCase()}` : etiquetaEstado(r.estado);
+    insignia.textContent = esAtipico(r) && r.severidad ? `${etiquetaSentido(r)} · ${String(r.severidad).toLowerCase()}` : etiquetaEstado(r.estado);
     insignia.style.setProperty("--c", css(est ? est[1] : "--neutro"));
 
     const cuerpo = $("ficha-cuerpo");
@@ -1127,8 +1249,8 @@
     seccion("Identificación", "archivo", [["Factura", r.factura], ["Prestador", r.prestador], ["Servicio", etiquetaServicio(r.servicio)],
       ["Sede", etiquetaSede(r.sede)], ["Dirección", r.direccion], ["Cuenta / contrato", r.cuenta],
       ["Periodicidad", r.bimestral ? `Bimestral (${r.dias || "?"} días)` : "Mensual"]]);
-    seccion("Validación", "escudo", [["Estado", etiquetaEstado(r.estado)], ["Severidad", r.severidad],
-      ["Detalle", r.detalle], ["Consumo de referencia", r.consumo_ref === null || r.consumo_ref === undefined ? null : `${fmt.format(r.consumo_ref)} ${etiquetaUnidad(r.unidad)}/mes (${r.metodo_ref})`],
+    seccion("Validación", "escudo", [["Estado", etiquetaEstado(r.estado)], ["Sentido", esAtipico(r) ? etiquetaSentido(r) : null], ["Severidad", r.severidad],
+      ["Detalle", r.detalle], ["Consumo de referencia", r.consumo_ref === null || r.consumo_ref === undefined ? null : `${fmt.format(r.consumo_ref)} ${etiquetaUnidad(r.unidad)} esperados (${r.metodo_ref})`],
       ["Revisión", r.revision]]);
 
     const pie = $("ficha-archivo");
@@ -1147,7 +1269,7 @@
   function descargar() {
     const filas = buscar(filtradas(false), $("buscar").value);
     const cols = ["sede", "prestador", "servicio", "factura", "cuenta", "periodo_inicio",
-      "periodo_fin", "bimestral", "consumo", "unidad", "valor", "valor_servicio", "valor_aseo", "estado", "severidad", "detalle", "archivo"];
+      "periodo_fin", "bimestral", "consumo", "unidad", "valor", "valor_servicio", "valor_aseo", "estado", "sentido", "severidad", "detalle", "archivo"];
     const csv = [cols.join(",")].concat(filas.map((r) => cols.map((c) => celdaCsv(r[c])).join(","))).join("\r\n");
     const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");
@@ -1198,6 +1320,12 @@
     document.querySelectorAll("#u-sede button").forEach((b) => b.addEventListener("click", () => {
       unidadSede = b.dataset.u;
       document.querySelectorAll("#u-sede button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      renderizar();
+    }));
+    document.querySelectorAll("#z-mapa button").forEach((b) => b.addEventListener("click", () => irAVista(b.dataset.z)));
+    document.querySelectorAll("#u-mapa button").forEach((b) => b.addEventListener("click", () => {
+      unidadMapa = b.dataset.u;
+      document.querySelectorAll("#u-mapa button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       renderizar();
     }));
     $("f-hallazgo").addEventListener("change", () => { hallazgo = $("f-hallazgo").value; pag.cola = 0; renderizar(); });

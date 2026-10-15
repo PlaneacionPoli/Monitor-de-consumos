@@ -17,3 +17,6 @@ __pycache__/
 *.db
 
 # OJO: site/ SI se versiona; solo contiene el sitio y data.enc.json (cifrado).
+
+# copia local del dashboard servida por Streamlit
+app/static/dashboard/

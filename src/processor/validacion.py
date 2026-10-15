@@ -8,7 +8,10 @@ poder probarlas. `validar_base` asigna `estado`, `detalle`, `severidad` y
 import pandas as pd
 
 UMBRAL = 0.20
-MIN_LIMPIOS = 3     # periodos no atipicos minimos para omitir atipicos de la referencia
+Z_ATIPICO = 3.0         # sigmas robustas (MAD) para considerar atipico un periodo
+MIN_PARES = 5           # contratos comparables minimos para normalizar por pares
+MIN_RACHA = 3           # periodos seguidos con el mismo sentido = cambio de nivel
+MIN_SERIE_LARGA = 6     # menos periodos -> la alerta se etiqueta 'serie corta'
 FACTURA_NO_IDENTIFICADA = "N° factura no identificado"
 # R-02: unidad esperada por servicio (aseo, $/kg, aun no tiene fila propia: DEC-03).
 UNIDAD_POR_SERVICIO = {"energia": "kWh", "acueducto": "m3"}
@@ -37,66 +40,130 @@ def marcar_unidad(base: pd.DataFrame) -> None:
                                 + " no corresponde a " + base.loc[mal, "servicio"].astype(str))
 
 
-def marcar_atipicos(base: pd.DataFrame, umbral: float = UMBRAL) -> list:
-    """R-03: variacion > umbral vs. mismo periodo del anio anterior.
+def _dias_efectivos(base: pd.DataFrame) -> pd.Series:
+    """Dias del periodo facturado; sin dato se asume 30 (60 si es bimestral)."""
+    dias = pd.to_numeric(base["dias"], errors="coerce") if "dias" in base.columns \
+        else pd.Series(float("nan"), index=base.index)
+    meses = base["bimestral"].fillna(False).astype(bool).map({True: 2, False: 1}) \
+        if "bimestral" in base.columns else 1
+    return dias.where(dias > 0, 30 * meses)
 
-    Sin ese periodo se compara con la mediana de los 3 periodos previos (metodo
-    'mediana3', suplente). Serie = servicio + medidor, sin sede. Solo marca filas
-    cuyo estado sea OK. Retorna los indices marcados.
 
-    - Compara consumo mensualizado (`consumo_mensual`): un recibo bimestral se
-      divide entre 2 para no verse como pico frente a uno mensual.
-    - Los atipicos ya detectados se omiten de la referencia (mediana o mismo
-      periodo del anio anterior): un pico no debe normalizar al siguiente. Solo
-      aplica con >= 3 periodos limpios; con menos historia se usan todos los
-      previos, porque una unica referencia limpia dejaria marcada toda la serie.
-    - Deja `consumo_ref`, `variacion` y `metodo_ref` en cada fila evaluada.
+def _referencia_robusta(y: pd.Series, umbral: float):
+    """Mediana y sigma robusta (MAD) de la serie, omitiendo los atipicos hallados.
+
+    Dos pasadas: la primera detecta, la segunda recalcula sin los detectados.
+    Atipico = a mas de Z_ATIPICO sigmas robustas Y a mas de `umbral` de la mediana.
+    Retorna (mediana, sigma, marcados:bool Series).
     """
-    col = "consumo_mensual" if "consumo_mensual" in base.columns else "consumo"
-    for nombre in ("consumo_ref", "variacion"):
-        base[nombre] = float("nan")
+    limpio = pd.Series(True, index=y.index)
+    marcados = pd.Series(False, index=y.index)
+    mediana = sigma = float("nan")
+    for _ in range(2):
+        base_ref = y[limpio]
+        if len(base_ref) < 3:
+            break
+        mediana = base_ref.median()
+        sigma = max(1.4826 * (base_ref - mediana).abs().median(), 0.05 * mediana)
+        marcados = ((y - mediana).abs() > Z_ATIPICO * sigma) \
+            & ((y / mediana - 1).abs() > umbral)
+        limpio = ~marcados
+    return mediana, sigma, marcados
+
+
+def _factor_pares(base: pd.DataFrame, consumo_dia: pd.Series) -> pd.Series:
+    """Mediana de consumo/dia de los pares (mismo servicio, prestador y mes).
+
+    Solo existe con >= MIN_PARES contratos distintos ese mes. Sirve para quitar
+    la estacionalidad comun: si todos suben a la vez, nadie es atipico.
+    """
+    g = pd.DataFrame({"servicio": base["servicio"], "prestador": base["prestador"] if "prestador" in base.columns else "",
+                      "ymes": base["ymes"], "cuenta": base["cuenta_grupo"], "x": consumo_dia})
+    g = g[(g["x"] > 0) & ~base["sin_serie"]]
+    claves = ["servicio", "prestador", "ymes"]
+    est = g.groupby(claves).agg(n=("cuenta", "nunique"), mediana=("x", "median"))
+    est = est[est["n"] >= MIN_PARES]["mediana"]
+    llaves = pd.MultiIndex.from_frame(g.reindex(base.index)[claves])
+    return pd.Series(est.reindex(llaves).to_numpy(), index=base.index)
+
+
+def marcar_atipicos(base: pd.DataFrame, umbral: float = UMBRAL) -> list:
+    """R-03: atipicos sin exigir historico anual (hay series de un solo anio).
+
+    Orden de metodos por serie (servicio + medidor, sin sede):
+    1. 'anual': el mismo mes del anio anterior existe -> variacion > umbral.
+    2. 'mad_pares': consumo por dia dividido por la mediana de los pares del mes
+       (quita la estacionalidad comun), contra la mediana y MAD de la serie.
+    3. 'mad': igual, sin pares (menos de MIN_PARES contratos comparables).
+    Siempre sobre consumo por dia (recibos de 29 a 32 dias y bimestrales
+    comparables), omitiendo los atipicos de la referencia. Un salto sostenido de
+    >= MIN_RACHA periodos en el mismo sentido es un cambio de nivel: se marcan
+    los primeros periodos y no se repite la alerta. Series de < MIN_SERIE_LARGA periodos quedan etiquetadas 'serie corta'.
+    Solo marca filas con estado OK. Deja consumo_ref (consumo esperado del
+    periodo), variacion y metodo_ref. Retorna los indices marcados.
+    """
+    base["consumo_ref"] = float("nan")
+    base["variacion"] = float("nan")
     base["metodo_ref"] = ""
+    base["sentido"] = ""          # AUMENTO | CAIDA (solo atipicos)
+    dias = _dias_efectivos(base)
+    consumo_dia = pd.to_numeric(base["consumo"], errors="coerce") / dias
+    pares = _factor_pares(base, consumo_dia)
     marcados = []
+
     for (_servicio, _cuenta), grupo in base[~base["sin_serie"]].groupby(
             ["servicio", "cuenta_grupo"]):
         grupo = grupo.sort_values("periodo_fin")
-        validos = []        # (ymes, consumo) de periodos previos NO atipicos
-        todos = []          # (ymes, consumo) de todos los periodos previos
-        for idx, fila in grupo.iterrows():
-            actual = fila[col]
-            if pd.isna(actual) or actual == 0:
-                continue
+        x = consumo_dia[grupo.index]
+        x = x[x > 0]
+        if len(x) < 3:
+            continue
+        usa_pares = pares[x.index].notna().mean() >= 0.8
+        y = x / pares[x.index] if usa_pares else x
+        if usa_pares:
+            y = y.where(pares[x.index].notna())
+            y = y.fillna(y.median())
+        mediana, _sigma, robustos = _referencia_robusta(y, umbral)
+        if pd.isna(mediana):
+            continue
+        metodo = "mad_pares" if usa_pares else "mad"
+        por_ymes = {base.at[i, "ymes"]: x[i] for i in x.index}
+        corta = len(x) < MIN_SERIE_LARGA
+
+        signo_prev, racha = 0, 0
+        for idx in x.index:                       # ya ordenado por periodo_fin
+            esperado_dia = mediana * (x[idx] / y[idx])
+            met = metodo
             try:
-                y, m = fila["ymes"].split("-")
-                ref_ymes = f"{int(y) - 1}-{m}"
+                anio, mes = base.at[idx, "ymes"].split("-")
+                previo = por_ymes.get(f"{int(anio) - 1}-{mes}")
             except ValueError:
-                continue
-            anual = [c for ym, c in validos if ym == ref_ymes]
-            if anual:
-                ref, metodo = anual[-1], "anual"
+                previo = None
+            if previo:
+                esperado_dia, met = previo, "anual"
+                es_atipico = abs(x[idx] / previo - 1) > umbral
             else:
-                previos = [c for _, c in validos[-3:]]
-                if len(previos) < MIN_LIMPIOS:
-                    previos = [c for _, c in todos[-3:]]
-                if not previos:
-                    validos.append((fila["ymes"], actual))
-                    todos.append((fila["ymes"], actual))
-                    continue
-                ref, metodo = sorted(previos)[len(previos) // 2], "mediana3"
-            variacion = (actual - ref) / ref
-            base.at[idx, "consumo_ref"] = ref
+                es_atipico = bool(robustos[idx])
+            variacion = x[idx] / esperado_dia - 1
+            base.at[idx, "consumo_ref"] = esperado_dia * dias[idx]
             base.at[idx, "variacion"] = variacion
-            base.at[idx, "metodo_ref"] = metodo
-            if abs(variacion) > umbral:
-                if base.at[idx, "estado"] == "OK":
-                    base.at[idx, "estado"] = "ATIPICO_REVISAR"
-                    base.at[idx, "detalle"] = f"{variacion:+.1%} vs {ref:,.0f} ({metodo})"
-                    base.at[idx, "severidad"] = "ALTA" if abs(variacion) > 0.50 else "MEDIA"
-                    marcados.append(idx)
-                    todos.append((fila["ymes"], actual))
-                    continue          # atipico: no entra a la referencia limpia
-            validos.append((fila["ymes"], actual))
-            todos.append((fila["ymes"], actual))
+            base.at[idx, "metodo_ref"] = met
+
+            signo = (1 if variacion > 0 else -1) if es_atipico else 0
+            racha = racha + 1 if signo and signo == signo_prev else (1 if signo else 0)
+            signo_prev = signo
+            if not es_atipico or base.at[idx, "estado"] != "OK":
+                continue
+            if racha >= MIN_RACHA and met != "anual":
+                base.at[idx, "detalle"] = "parte de un cambio de nivel sostenido"
+                continue          # la alerta del cambio de nivel no se repite
+            base.at[idx, "estado"] = "ATIPICO_REVISAR"
+            base.at[idx, "detalle"] = (
+                f"{variacion:+.1%} vs {base.at[idx, 'consumo_ref']:,.0f} ({met})"
+                + (" serie corta" if corta else ""))
+            base.at[idx, "severidad"] = "ALTA" if abs(variacion) > 0.50 else "MEDIA"
+            base.at[idx, "sentido"] = "AUMENTO" if variacion > 0 else "CAIDA"
+            marcados.append(idx)
     return marcados
 
 

@@ -3,7 +3,7 @@ Organizacion de data/outputs por etapa del pipeline.
 
 Cada archivo vive en la carpeta de su etapa, segun el prefijo de su nombre:
 
-  01_extraccion/   bogota_*, csu_*, epm_*          (lotes extraidos de los PDF)
+  01_extraccion/   bogota_*, csu_*, epm_*, extraccion_*  (lotes extraidos de los PDF)
   02_consolidado/  base_unificada_*                 (esquema comun, sin duplicados)
   03_validacion/   validacion_*                     (estado, severidad, confianza)
   04_alertas/      alertas_*                        (atipicos y faltantes)
@@ -31,6 +31,7 @@ CARPETAS = [
     ("bogota_", "01_extraccion"),
     ("csu_", "01_extraccion"),
     ("epm_", "01_extraccion"),
+    ("extraccion_", "01_extraccion"),
     ("validacion_", "03_validacion"),
     ("alertas_", "04_alertas"),
     ("monitor.db", "05_oficial"),
@@ -38,6 +39,7 @@ CARPETAS = [
     ("sedes_por_contrato", "catalogos"),
     ("inventario_pdfs", "catalogos"),
     ("auditoria", "control"),
+    ("registro_extracciones", "control"),
     ("medicion_automatizacion", "control"),
     ("accesos_dashboard", "control"),
     ("Energia_", "_legado"),
@@ -45,7 +47,7 @@ CARPETAS = [
     ("facturas_", "_legado"),
 ]
 # prefijos con una version por corrida (las anteriores se archivan)
-VERSIONADOS = ["bogota_", "csu_", "epm_", "base_unificada_", "validacion_", "alertas_", "base_oficial_"]
+VERSIONADOS = ["bogota_", "csu_", "epm_", "extraccion_", "base_unificada_", "validacion_", "alertas_", "base_oficial_"]
 HISTORICO = "_historico"
 
 

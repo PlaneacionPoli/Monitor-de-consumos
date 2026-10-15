@@ -15,6 +15,8 @@ pip install -r requirements.txt            # Tesseract (con idioma spa) se insta
 python scripts/pipeline.py                 # orquesta todo, en orden, midiendo tiempos
 python -m pytest tests/ -q                 # suite (59 pruebas; la de Node se omite si no hay node)
 python -m pytest tests/test_extractores.py::test_moneda_latina -q   # una prueba
+python app/aplicacion.py        # app local unica en Dash (http://localhost:8050): Cargar facturas + Dashboard HTML oficial incrustado (o Iniciar_App.bat)
+python scripts/procesar_archivos.py <carpeta|pdf> [--simular|--solo-extraer|--forzar]   # misma carga por consola
 python -m src.dashboard.dashboard          # dashboard Dash en http://localhost:8050
 python scripts/cargar_almacen.py [--publicar] [--exportar]   # almacen SQLite + compuerta de confirmacion
 python scripts/publicar_dashboard.py       # sitio estatico CIFRADO en site/ para GitHub Pages
@@ -39,6 +41,8 @@ El flujo real es una **cadena de archivos Excel/CSV en `data/outputs/`** con nom
 - `src/dashboard_estatico/` + `scripts/publicar_dashboard.py`: dashboard HTML/JS (secciones Ejecutiva y Operativa, ECharts local en `vendor/`) cuyos datos se publican cifrados; ver `docs/Dashboard_GitHub_Pages.md`. No es el mismo dashboard que `src/dashboard/dashboard.py` (Dash).
 - `scripts/validar_atipicos.py`: regla de >20% vs. mismo periodo del año anterior; sin 12 meses de histórico usa mediana de los 3 periodos previos como suplente (marcado). Confianza sobre periodo/consumo/valor; fila incompleta → `REVISION_BAJA_CONFIANZA`, nunca se rechaza.
 - Reglas de negocio a respetar: el periodo sale del cuerpo de la factura (nunca de la fecha de recepción); factura sin número → "N factura no identificado" sin rechazar; Calle 84 factura bimensual (no es "faltante"); la clave de dedup incluye servicio.
+
+- **Carga incremental (app)**: `src/processor/extraccion.py` detecta el prestador por contenido (no por carpeta) y `carga.py` registra cada PDF por hash en `control/registro_extracciones.db`; solo extrae lo nuevo o lo de una `VERSION_EXTRACTORES` anterior (subirla al cambiar un extractor). `exportar_extraccion` vuelca todo a `01_extraccion/extraccion_*.xlsx`, que `consolidar_base`/`validar_atipicos` prefieren sobre los `bogota_/csu_/epm_` sueltos. `actualizacion.py` encadena las etapas posteriores (incluye `publicar_dashboard.py` y copia `site/` a `app/static/dashboard/`, que la app Dash sirve en /sitio/ y muestra en la pagina Dashboard; el dashboard oficial es el HTML de `site/`, el Dash de `src/dashboard/` es el diseno original sin uso). El dashboard HTML trae un mapa de sedes (ECharts + `vendor/colombia.geojson`, contorno DANE; coordenadas por sede en `COORDS_SEDES` de `app.js`, a nivel de calle en Bogota). `exportar_extraccion` suma los lotes `bogota_/csu_/epm_` historicos al libro acumulado para no perder lo extraido antes de la app. Facturas de aseo (Emvarias) quedan `OMITIDA` (fuera de alcance).
 
 ## Ojo con
 

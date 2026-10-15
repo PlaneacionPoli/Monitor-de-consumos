@@ -3,3 +3,9 @@ Origen : https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js (paquete
 SHA-256: b66b25aeb4df84e33199dc21694014d336d222cbd9deb0e5a7c14bd6aa0d0fd0
 Se publica junto al sitio para que NO se cargue nada de terceros en el navegador.
 Para actualizar: descargar la nueva version, verificar su cabecera y version, y actualizar esta nota.
+
+colombia.geojson - contorno departamental de Colombia para el mapa de sedes.
+Origen : https://github.com/caticoa3/colombia_mapa (co_2018_MGN_DPTO_POLITICO.geojson), derivado del
+         Marco Geoestadistico Nacional (MGN) 2018 del DANE. Se conservo solo el nombre del departamento y
+         se redondearon las coordenadas a 3 decimales (395 KB -> 43 KB). Datos publicos; citar al DANE.
+Se publica junto al sitio (sin cargar nada de terceros). Las sedes se ubican por ciudad, de forma aproximada.

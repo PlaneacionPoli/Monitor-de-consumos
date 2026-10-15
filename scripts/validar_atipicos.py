@@ -43,7 +43,9 @@ def main():
     print(f"Filas evaluadas: {len(base)} | Atipicos: {len(atipicos_idx)}")
 
     pendientes = []
-    for patron in ["bogota_*.xlsx", "csu_*.xlsx"]:
+    patrones = (["extraccion_*.xlsx"] if ultimo("extraccion_*.xlsx")
+                else ["bogota_*.xlsx", "csu_*.xlsx"])
+    for patron in patrones:
         ruta_lote = ultimo(patron)
         if not ruta_lote:
             continue

@@ -1,0 +1,92 @@
+/* Identidad POLI, modo claro. Mismos tokens que el dashboard HTML oficial. */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+:root{--azul:#263A58;--claro:#22B2DE;--cian:#15BECE;--fondo:#F1F7FA;--borde:#DBE4EC;--suave:#5A6A82;
+  --lima:#B1C900;--magenta:#E4006D;--oro:#F7B400;
+  --sombra:0 1px 2px rgba(38,58,88,.06),0 6px 18px -10px rgba(38,58,88,.25)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--fondo);color:var(--azul);font:15px/1.5 Montserrat,Poppins,"Segoe UI",system-ui,sans-serif}
+h1,h2,h3{color:var(--azul);letter-spacing:-.01em;margin:0}
+.app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+@media(max-width:860px){.app{grid-template-columns:1fr}.lateral{border-right:0;border-bottom:1px solid var(--borde)}}
+
+/* barra lateral */
+.lateral{background:#fff;border-right:1px solid var(--borde);padding:1.4rem 1.1rem;display:flex;flex-direction:column;gap:1.4rem}
+.lateral .logo{width:170px;max-width:100%;display:block}
+.nav{display:flex;flex-direction:column;gap:4px}
+.nav a{display:flex;align-items:center;gap:.6rem;padding:.6rem .8rem;border-radius:10px;color:var(--azul);
+  text-decoration:none;font-weight:600;font-size:.92rem}
+.nav a:hover{background:#EAF4F9}
+.nav a.activo{background:#E3F3FA;box-shadow:inset 3px 0 0 var(--claro)}
+.nav img{width:20px;height:20px}
+.lateral .pie{margin-top:auto;color:var(--suave);font-size:.74rem;line-height:1.4}
+
+/* contenido */
+.principal{padding:1.6rem 2rem 3rem;max-width:1240px;width:100%}
+@media(max-width:860px){.principal{padding:1rem}}
+.cab{display:flex;align-items:center;gap:1rem;background:#fff;border:1px solid var(--borde);border-left:6px solid var(--claro);
+  border-radius:14px;padding:1rem 1.3rem;box-shadow:var(--sombra);margin-bottom:1.3rem}
+.cab img{width:54px;height:54px}
+.cab h1{font-size:1.3rem;line-height:1.2}
+.cab p{margin:.15rem 0 0;color:var(--suave);font-size:.88rem}
+.tarjeta{background:#fff;border:1px solid var(--borde);border-radius:14px;padding:1.3rem 1.5rem;box-shadow:var(--sombra);margin-bottom:1rem}
+.tarjeta h2{font-size:1.1rem;margin-bottom:.4rem}
+.suave{color:var(--suave)}
+.pequeno{font-size:.82rem}
+
+/* pasos */
+.pasos{display:flex;align-items:center;margin:0 0 1.3rem}
+.paso{display:flex;align-items:center;gap:.55rem;color:var(--suave);font-weight:600;font-size:.85rem;white-space:nowrap}
+.paso b{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#fff;border:2px solid var(--borde);font-size:.9rem}
+.paso.hecho b{background:var(--azul);border-color:var(--azul);color:#fff}
+.paso.actual{color:var(--azul)}
+.paso.actual b{background:var(--claro);border-color:var(--claro);color:#fff;box-shadow:0 0 0 4px rgba(34,178,222,.2)}
+.linea{flex:1;height:2px;background:var(--borde);margin:0 .8rem;min-width:16px}
+.linea.hecho{background:var(--azul)}
+@media(max-width:760px){.paso span{display:none}}
+
+/* metricas */
+.metricas{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1rem;margin:.6rem 0 1rem}
+.metrica{background:#fff;border:1px solid var(--borde);border-left:5px solid var(--claro);border-radius:12px;padding:.8rem 1.1rem;box-shadow:var(--sombra)}
+.metrica small{display:block;color:var(--suave);font-weight:600;font-size:.8rem}
+.metrica strong{font-size:1.8rem;font-weight:700;line-height:1.2}
+.metrica.ok{border-left-color:var(--lima)}
+.metrica.alerta{border-left-color:var(--oro)}
+.metrica.neutro{border-left-color:var(--borde)}
+
+/* botones */
+.acciones{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1rem}
+button.btn{font:inherit;font-weight:600;padding:.62rem 1.2rem;border-radius:10px;border:1px solid var(--borde);
+  background:#fff;color:var(--azul);cursor:pointer;transition:all .15s}
+button.btn:hover:not(:disabled){border-color:var(--claro);background:#F4FAFD}
+button.btn.primario{background:var(--azul);border-color:var(--azul);color:#fff}
+button.btn.primario:hover:not(:disabled){background:#1B2B44;border-color:#1B2B44}
+button.btn:disabled{opacity:.45;cursor:not-allowed}
+button.btn:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--claro);outline-offset:2px}
+.elegir{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1rem 0}
+.elegir button.btn{padding:1.2rem;display:flex;flex-direction:column;align-items:center;gap:.5rem;font-size:.95rem}
+.elegir img{width:30px;height:30px}
+input[type=text]{font:inherit;padding:.6rem .8rem;border:1px solid var(--borde);border-radius:10px;color:var(--azul);min-width:0;flex:1}
+.ruta-manual{display:flex;gap:.6rem;margin-top:.4rem}
+details summary{cursor:pointer;color:var(--suave);font-weight:600;font-size:.88rem;margin-top:.6rem}
+
+/* listas, avisos, tablas */
+.seleccion{list-style:none;margin:.6rem 0 0;padding:0;display:flex;flex-direction:column;gap:.4rem}
+.seleccion li{display:flex;gap:.6rem;align-items:center;background:#F4FAFD;border:1px solid var(--borde);border-radius:10px;padding:.5rem .8rem;font-size:.86rem;word-break:break-all}
+.seleccion img{width:18px;height:18px;flex:none}
+.aviso{border-radius:12px;padding:.8rem 1rem;margin:.6rem 0;border:1px solid var(--borde);background:#F4FAFD;font-size:.9rem}
+.aviso.ok{background:#F6FAE0;border-color:#D9E68A}
+.aviso.alerta{background:#FFF8E1;border-color:#F3D98B}
+.aviso.error{background:#FDEBF3;border-color:#F4B6D2}
+table.tabla{width:100%;border-collapse:collapse;font-size:.84rem;margin-top:.6rem}
+table.tabla th{background:var(--azul);color:#fff;text-align:left;padding:.55rem .7rem;font-weight:600}
+table.tabla td{padding:.5rem .7rem;border-bottom:1px solid var(--borde);vertical-align:top}
+table.tabla tr:nth-child(even) td{background:#F8FBFD}
+pre.detalle{background:#F1F7FA;border:1px solid var(--borde);border-radius:10px;padding:.8rem;overflow:auto;font-size:.78rem;max-height:240px}
+
+/* progreso */
+.barra{height:12px;background:#E6EEF4;border-radius:99px;overflow:hidden;margin:.8rem 0 .4rem}
+.barra>div{height:100%;background:linear-gradient(90deg,var(--claro),var(--cian));border-radius:99px;transition:width .3s}
+
+/* dashboard incrustado */
+iframe.sitio{width:100%;height:calc(100vh - 230px);min-height:620px;border:1px solid var(--borde);border-radius:14px;background:#fff;box-shadow:var(--sombra)}
+.barra-sup{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.8rem}

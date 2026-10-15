@@ -363,3 +363,8 @@ dialog#detalle[open]{animation:pop .22s ease-out}
 .alertas .var{font-weight:600;font-variant-numeric:tabular-nums}
 .alertas .var.sube{color:var(--alta)}
 .alertas .var.baja{color:var(--info)}
+
+/* ---- mapa de sedes ---- */
+#tarjeta-mapa{margin:1rem 0}
+.mapa-ec{height:540px;border-radius:10px;background:#F7FBFD}
+@media(max-width:640px){.mapa-ec{height:380px}}

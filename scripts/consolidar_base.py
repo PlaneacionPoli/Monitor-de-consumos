@@ -62,6 +62,8 @@ def normalizar(df: pd.DataFrame, servicio_por_defecto: str) -> pd.DataFrame:
     """Mapea columnas heterogeneas al esquema comun."""
     filas = []
     for _, r in df.iterrows():
+        # NaN es "verdadero" en un `a or b`: se pasan los vacios a None (hay columnas de varios lotes unidas)
+        r = r.astype(object).where(pd.notna(r), None)
         factura = _primero(r, CLAVES_FACTURA)
         consumo = _numero(r, ["consumo_kwh", "CONSUMO Kwh"])
         unidad = "kWh"
@@ -117,7 +119,10 @@ def normalizar(df: pd.DataFrame, servicio_por_defecto: str) -> pd.DataFrame:
 
 def main():
     hojas = []
-    for patron in ["bogota_*.xlsx", "csu_*.xlsx", "epm_*.xlsx"]:
+    # La app acumula todo en extraccion_*; si existe, manda sobre los lotes sueltos.
+    patrones = (["extraccion_*.xlsx"] if ultimo("extraccion_*.xlsx")
+                else ["bogota_*.xlsx", "csu_*.xlsx", "epm_*.xlsx"])
+    for patron in patrones:
         ruta = ultimo(patron)
         if not ruta:
             print(f"AVISO: sin archivos {patron}")

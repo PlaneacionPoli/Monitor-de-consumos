@@ -33,7 +33,7 @@ COLUMNAS = [  # (campo, encabezado, ancho, formato)
     ("periodo_inicio", "Periodo inicio", 13, "yyyy-mm-dd"), ("periodo_fin", "Periodo fin", 13, "yyyy-mm-dd"),
     ("consumo", "Consumo", 12, "#,##0"), ("unidad", "Unidad", 8, None),
     ("valor", "Valor facturado (COP)", 20, '"$" #,##0'), ("estado_txt", "Estado", 18, None),
-    ("severidad", "Severidad", 11, None), ("detalle", "Detalle", 48, None),
+    ("severidad", "Severidad", 11, None), ("sentido_txt", "Sentido", 10, None), ("detalle", "Detalle", 48, None),
     ("confianza", "Confianza", 11, "0%"), ("cuenta", "Cuenta / medidor", 20, None),
     ("direccion", "Dirección", 34, None), ("archivo", "Archivo origen", 44, None),
 ]
@@ -61,6 +61,8 @@ def preparar(base: pd.DataFrame) -> pd.DataFrame:
     base["servicio"] = base["servicio"].astype(str).str.replace("^energia$", "Energía", regex=True) \
         .str.capitalize().str.replace("^Energ[ií]a$", "Energía", regex=True)
     base["unidad"] = base["unidad"].replace({"m3": "m³"})
+    base["sentido_txt"] = base["sentido"].map({"AUMENTO": "Aumento", "CAIDA": "Caída"}).fillna("") \
+        if "sentido" in base.columns else ""
     base["estado_txt"] = base["estado"].map(ESTADOS).fillna(base["estado"])
     for c in ("periodo_inicio", "periodo_fin"):
         base[c] = pd.to_datetime(base[c], errors="coerce")
@@ -175,6 +177,8 @@ def main():
         return 1
     libro = pd.read_excel(ruta_val, sheet_name=None)
     base = preparar(libro["Base"])
+    if "severidad" not in base.columns:      # cargas pequenas: validacion sin atipicos
+        base["severidad"] = None
     atip = base[base["estado"] == "ATIPICO_REVISAR"].copy()
     atip["_o"] = atip["severidad"].map({"ALTA": 0, "MEDIA": 1}).fillna(2)
     atip = atip.sort_values(["_o", "sede_final", "periodo_fin"], ascending=[True, True, False])

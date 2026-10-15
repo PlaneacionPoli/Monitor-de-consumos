@@ -40,12 +40,12 @@ def main():
     print(causas.to_string(index=False))
 
     atip = base[base["estado"] == "ATIPICO_REVISAR"].copy()
-    atip["metodo"] = atip["detalle"].str.extract(r"\((anual|mediana3)\)")
+    atip["metodo"] = atip["detalle"].str.extract(r"\((anual|mad_pares|mad)\)")
     por_metodo = atip["metodo"].value_counts()
     print("\nAtipicos por metodo de comparacion:")
     print(por_metodo.to_string())
-    if "mediana3" in por_metodo.index:
-        sin_sup = ok + int(por_metodo["mediana3"])
+    if "mad" in por_metodo.index:
+        sin_sup = ok + int(por_metodo["mad"])
         print(f"\nSi los atipicos por mediana3 (historico < 12 m) quedaran fuera de revision, "
               f"el % seria {sin_sup / total:.1%}: cota superior, no una medicion.")
 

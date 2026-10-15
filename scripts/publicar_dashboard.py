@@ -10,7 +10,7 @@ contrasena son correctos. En el repositorio solo queda texto cifrado.
 Entrada : data/outputs/validacion_*.xlsx (+ monitor.db si existe)
 Correos  : config/accesos_dashboard.txt (un correo por linea; no se versiona)
 Claves   : data/outputs/accesos_dashboard.csv (se reutilizan; no se versiona)
-Salida   : site/  (index.html, app.js, descifrar.js, estilos.css, logo_poli.png, echarts.min.js, data.enc.json)
+Salida   : site/  (index.html, app.js, descifrar.js, estilos.css, logo_poli.png, echarts.min.js, colombia.geojson, data.enc.json)
 
 Limites: quitar a un usuario solo cierra el acceso a los datos publicados DESDE
 la siguiente corrida (la clave de datos se rota); las copias anteriores del
@@ -51,7 +51,7 @@ RUTA_CLAVES = rutas.ruta("accesos_dashboard.csv")
 ITERACIONES = 600_000
 AAD_DATOS = b"monitor-consumos-v1"
 ARCHIVOS_SITIO = ["index.html", "app.js", "descifrar.js", "estilos.css", "logo_poli.png"]
-VENDOR = ["echarts.min.js"]  # src/dashboard_estatico/vendor; se sirve desde el sitio, sin CDN
+VENDOR = ["echarts.min.js", "colombia.geojson"]  # src/dashboard_estatico/vendor; se sirve desde el sitio, sin CDN
 
 
 def b64(datos: bytes) -> str:
@@ -149,7 +149,7 @@ def construir_datos() -> dict:
             "valor_aseo": r.get("valor_aseo"), "bimestral": bool(r.get("bimestral")),
             "dias": r.get("dias"), "consumo_mensual": r.get("consumo_mensual"),
             "consumo_ref": r.get("consumo_ref"), "variacion": r.get("variacion"),
-            "metodo_ref": r.get("metodo_ref"), "estado": r.get("estado"),
+            "metodo_ref": r.get("metodo_ref"), "sentido": r.get("sentido"), "estado": r.get("estado"),
             "severidad": r.get("severidad"), "detalle": r.get("detalle"),
             "confianza": r.get("confianza"),
             "revision": estados.get(clave_registro(
