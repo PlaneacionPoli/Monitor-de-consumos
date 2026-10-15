@@ -322,3 +322,17 @@ def test_faltantes_corte_por_prestador_evita_falsas_alertas():
     enel["prestador"] = "Enel"
     # EPM termina en 2025 y Enel en 2026: cada serie se evalua contra su prestador.
     assert detectar_faltantes(pd.concat([epm, enel])) == []
+
+
+def test_eaab_consumo_desde_medidor_no_historico():
+    # Calle 84 sep-2026: el grafico sale "6 7 14 85" (no cronologico); el consumo
+    # del periodo es lectura actual - anterior (1689 - 1682 = 7), no el ultimo valor.
+    texto = ("ULTIMO\nCONSUMO\n6\n7\n14\n85\n"
+             "(415)7707200485271(8020)105295682130(3900)000000135310\n"
+             "7.000\n119\n40\n1689\n1682\nBajo consumo\n0\n$135.310\n")
+    assert extraer_eaab(texto, "m.pdf")["consumo_m3"] == 7.0
+    # Campus: litros sin separador de miles y promedio con punto
+    texto = ("ULTIMO\nCONSUMO\n799\n1069\n1265\n"
+             "(3900)000010394060\n1250000\n43.103\n1124\n27516\n26266\n"
+             "Consumo Normal\n0\n")
+    assert extraer_eaab(texto, "m.pdf")["consumo_m3"] == 1250.0

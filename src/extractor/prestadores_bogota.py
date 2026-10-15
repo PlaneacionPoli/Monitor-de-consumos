@@ -303,10 +303,28 @@ def extraer_eaab(texto: str, nombre_archivo: str = "") -> Dict[str, Any]:
     codigo_barras = re.search(r"\(3900\)0*(\d+)", texto)
     datos["valor_total"] = float(codigo_barras.group(1)) if codigo_barras else None
 
-    historico = re.search(r"ULTIMO\s*\nCONSUMO\s*\n((?:\d+\s*\n)+)", texto)
-    if historico:
-        valores = re.findall(r"\d+", historico.group(1))
-        datos["consumo_m3"] = float(valores[-1]) if valores else None
+    # Consumo del periodo: el grafico historico ("ULTIMO CONSUMO 6 7 14 85") sale
+    # en orden de lectura del PDF, no cronologico (el ultimo valor suele ser el
+    # mayor, no el del periodo). Se prioriza el medidor: lectura actual - anterior.
+    # Bloque: botellas (L), promedio al dia, promedio 3 periodos, lectura act., lectura ant.
+    medidor = re.search(
+        r"\n(\d+(?:\.\d{3})*)\n[\d\.,]+\n[\d\.,]+\n(\d{2,})\n(\d{2,})\n(?=[A-Za-z])", texto)
+    consumo = None
+    pendiente = "id_predio sin valor en texto"
+    if medidor:
+        diff = int(medidor.group(2)) - int(medidor.group(3))
+        litros = int(medidor.group(1).replace(".", ""))
+        if diff >= 0 and litros in (0, diff * 1000):
+            consumo = float(diff)
+        elif litros % 1000 == 0:
+            consumo = litros / 1000.0
+    if consumo is None:
+        historico = re.search(r"ULTIMO\s*\nCONSUMO\s*\n((?:\d+\s*\n)+)", texto)
+        if historico:
+            valores = re.findall(r"\d+", historico.group(1))
+            consumo = float(valores[-1]) if valores else None
+            pendiente += "; consumo tomado del historico, verificar"
+    datos["consumo_m3"] = consumo
 
-    datos["_pendiente_visual"] = "id_predio sin valor en texto"
+    datos["_pendiente_visual"] = pendiente
     return datos
