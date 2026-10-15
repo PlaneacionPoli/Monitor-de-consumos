@@ -392,8 +392,9 @@ def dibujar(paso, plan, res, final, forzar):
     if final:
         if final.get("ok"):
             descarga_off = False
-            final_ui = html.Div(["Archivo actualizado. También queda guardado en: ", html.B(final["libro"])],
-                                className="aviso ok")
+            final_ui = [html.Div(["Archivo actualizado. También queda guardado en: ", html.B(final["libro"])],
+                                 className="aviso ok")]
+            final_ui += [html.Div(a, className="aviso alerta") for a in final.get("avisos", [])]
         else:
             final_ui = [html.Div(f"No se pudo terminar en el paso «{final.get('etapa_fallida')}». "
                                  "Avisa al equipo técnico con este detalle:", className="aviso error"),
@@ -408,8 +409,7 @@ def regenerar(n):
     r = subprocess.run([sys.executable, "scripts/publicar_dashboard.py"], cwd=BASE, capture_output=True,
                        text=True, encoding="utf-8", errors="replace")
     if r.returncode != 0:
-        return [html.Div("No se pudo actualizar. ¿Ya hay datos validados? Detalle para el equipo técnico:",
-                         className="aviso error"), html.Pre((r.stderr or r.stdout)[-1200:], className="detalle")]
+        return html.Div(actualizacion._aviso_dashboard((r.stderr or r.stdout)[-1200:]), className="aviso error")
     actualizacion.copiar_dashboard_local()
     return html.Div("Dashboard actualizado. Recarga la página para verlo.", className="aviso ok")
 

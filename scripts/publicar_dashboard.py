@@ -90,7 +90,7 @@ def asignar_contrasenas(correos: list) -> dict:
 
 
 def mapa_sedes() -> dict:
-    ruta = rutas.ruta("catalogo_sedes.csv")
+    ruta = rutas.catalogo("catalogo_sedes.csv")
     if not os.path.exists(ruta):
         return {}
     cat = pd.read_csv(ruta, dtype=str).fillna("")

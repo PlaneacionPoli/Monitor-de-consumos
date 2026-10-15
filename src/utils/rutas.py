@@ -67,6 +67,19 @@ def ruta(nombre: str) -> str:
     return os.path.join(carpeta_de(nombre), nombre)
 
 
+CONFIG_CATALOGOS = os.path.join(BASE, "config", "catalogos")
+
+
+def catalogo(nombre: str) -> str:
+    """Ruta de un catalogo (catalogo_sedes.csv, sedes_por_contrato.csv).
+
+    Manda la version de trabajo de data/outputs/catalogos si existe; si no (equipo nuevo, sin data/),
+    la copia semilla de config/catalogos que viaja con el proyecto."""
+    trabajo = ruta(nombre)
+    semilla = os.path.join(CONFIG_CATALOGOS, nombre)
+    return trabajo if os.path.exists(trabajo) or not os.path.exists(semilla) else semilla
+
+
 def todos(patron: str) -> list:
     """Archivos que cumplen el patron (p. ej. 'validacion_*.xlsx'), del mas antiguo al mas reciente."""
     return sorted(glob.glob(os.path.join(carpeta_de(patron), patron)))

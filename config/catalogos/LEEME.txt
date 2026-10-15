@@ -1,0 +1,5 @@
+Catalogos semilla (viajan con el proyecto para que un equipo nuevo, sin carpeta data/, asigne bien la sede):
+  catalogo_sedes.csv     direccion normalizada de la factura -> sede (sede_confirmada manda sobre sede_sugerida)
+  sedes_por_contrato.csv cuenta/contrato -> sede, para facturas sin direccion util (p. ej. EPM)
+Si existe data/outputs/catalogos/<archivo>, esa version de trabajo tiene prioridad (rutas.catalogo()).
+OJO: contienen direcciones y numeros de cuenta de las sedes; decida si se versionan en git o se comparten por OneDrive.

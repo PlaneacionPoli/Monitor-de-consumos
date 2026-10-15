@@ -16,7 +16,7 @@ from src.utils import rutas
 
 
 def mapa_cuentas() -> dict:
-    ruta = rutas.ruta("sedes_por_contrato.csv")
+    ruta = rutas.catalogo("sedes_por_contrato.csv")
     if not os.path.exists(ruta):
         return {}
     cat = pd.read_csv(ruta, dtype=str).fillna("")

@@ -123,3 +123,32 @@ def test_exportar_incluye_lotes_historicos(tmp_path, db, monkeypatch):
     solo_app = pd.read_excel(carga.exportar_extraccion(db=db, destino=str(tmp_path / "p.xlsx"),
                                                        incluir_historico=False), sheet_name="Energia")
     assert set(solo_app["archivo_origen"]) == {"f.pdf"}
+
+
+def test_dashboard_sin_correos_no_bloquea_la_actualizacion(monkeypatch):
+    """Si publicar_dashboard falla (sin correos autorizados) el Excel igual queda actualizado."""
+    from types import SimpleNamespace
+    from src.processor import actualizacion
+
+    monkeypatch.setattr(actualizacion.carga, "exportar_extraccion", lambda: "x.xlsx")
+    monkeypatch.setattr(actualizacion, "copiar_dashboard_local", lambda: False)
+
+    def falso_run(cmd, **kw):
+        if "publicar_dashboard.py" in cmd[-1]:
+            return SimpleNamespace(returncode=1, stdout="Sin correos autorizados. Agregue uno", stderr="")
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(actualizacion.subprocess, "run", falso_run)
+    res = actualizacion.actualizar()
+    assert res["ok"] and len(res["avisos"]) == 1 and "correos autorizados" in res["avisos"][0]
+
+
+def test_etapa_obligatoria_que_falla_si_detiene(monkeypatch):
+    from types import SimpleNamespace
+    from src.processor import actualizacion
+
+    monkeypatch.setattr(actualizacion.carga, "exportar_extraccion", lambda: "x.xlsx")
+    monkeypatch.setattr(actualizacion.subprocess, "run",
+                        lambda cmd, **kw: SimpleNamespace(returncode=1, stdout="", stderr="boom"))
+    res = actualizacion.actualizar()
+    assert not res["ok"] and "boom" in res["detalle"]

@@ -50,6 +50,8 @@ def main():
         print(f"FALLÓ en '{res['etapa_fallida']}':\n{res['detalle']}")
         return 1
     print(f"Archivo actualizado: {res['libro']}")
+    for aviso in res.get("avisos", []):
+        print(f"AVISO: {aviso}")
     return 0
 
 
