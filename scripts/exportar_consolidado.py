@@ -58,6 +58,7 @@ def preparar(base: pd.DataFrame) -> pd.DataFrame:
                  .str.replace(r"\s*\|\s*\d+$", "", regex=True).str.strip())
     base["sede_final"] = direccion.map(mapa_sedes()).fillna("Sin sede identificada")
     base = completar_sede_por_cuenta(base, "Sin sede identificada")
+    base["sede_final"] = base["sede_final"].fillna("Sin sede identificada").astype(str)
     base["servicio"] = base["servicio"].astype(str).str.replace("^energia$", "Energía", regex=True) \
         .str.capitalize().str.replace("^Energ[ií]a$", "Energía", regex=True)
     base["unidad"] = base["unidad"].replace({"m3": "m³"})
@@ -176,6 +177,10 @@ def main():
         print("Sin validacion. Ejecute validar_atipicos.py primero.")
         return 1
     libro = pd.read_excel(ruta_val, sheet_name=None)
+    if libro["Base"].empty:
+        print("ERROR: la validacion no tiene facturas (ninguna con periodo legible). "
+              "Nada que exportar; revise los pendientes de lectura.")
+        return 1
     base = preparar(libro["Base"])
     if "severidad" not in base.columns:      # cargas pequenas: validacion sin atipicos
         base["severidad"] = None

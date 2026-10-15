@@ -37,7 +37,16 @@ def main():
         return 1
     base = pd.read_excel(ruta, sheet_name="Base")
     base["periodo_fin"] = pd.to_datetime(base["periodo_fin"], errors="coerce")
+    sin_periodo = base[base["periodo_fin"].isna()]
     base = base[base["periodo_fin"].notna()].copy()
+    if len(sin_periodo):
+        print(f"AVISO: {len(sin_periodo)} de {len(sin_periodo) + len(base)} facturas no tienen periodo "
+              "legible y no se pueden validar. Ejemplos: "
+              + "; ".join(sin_periodo["archivo"].astype(str).head(3)))
+    if base.empty:
+        print("ERROR: ninguna factura tiene periodo de consumo legible, no hay nada que validar. "
+              "Revise la hoja Pendientes de lectura o avise al equipo tecnico con este mensaje.")
+        return 1
     base, atipicos_idx = validar_base(base, UMBRAL)
 
     print(f"Filas evaluadas: {len(base)} | Atipicos: {len(atipicos_idx)}")
