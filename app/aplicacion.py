@@ -66,6 +66,7 @@ _ICONOS = {
              '<line x1="12" y1="3" x2="12" y2="15"/>',
     "tablero": '<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/>'
                '<rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>',
+    "menu": '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>',
     "carpeta": '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
     "archivo": '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>'
                '<polyline points="14 2 14 8 20 8"/>',
@@ -184,16 +185,23 @@ app.layout = html.Div([
     dcc.Interval(id="reloj", interval=500),
     html.Div([
         html.Aside([
-            html.Img(src=app.get_asset_url("logo_poli.png"), className="logo",
-                     alt="Politécnico Grancolombiano"),
+            html.Div([
+                html.Img(src=app.get_asset_url("icono.png"), className="mini", alt="Monitor de Consumos"),
+                html.Img(src=app.get_asset_url("logo_poli.png"), className="logo",
+                         alt="Politécnico Grancolombiano"),
+                html.Button(icono("menu"), id="btn-menu", n_clicks=0, className="menu-btn", title="Menú",
+                            **{"aria-label": "Mostrar u ocultar el menú", "aria-expanded": "false"}),
+            ], className="cab-lateral"),
             html.Nav([
-                dcc.Link([icono("subir"), "Cargar facturas"], href="/", id="nav-cargar"),
-                dcc.Link([icono("tablero"), "Dashboard"], href="/dashboard", id="nav-dash"),
+                dcc.Link([icono("subir"), html.Span("Cargar facturas")], href="/", id="nav-cargar",
+                         title="Cargar facturas"),
+                dcc.Link([icono("tablero"), html.Span("Dashboard")], href="/dashboard", id="nav-dash",
+                         title="Dashboard"),
             ], className="nav"),
             html.Div("Monitor de Consumos Ambientales · Politécnico Grancolombiano", className="pie"),
         ], className="lateral"),
         html.Main([vista_cargar, vista_dashboard], className="principal"),
-    ], className="app"),
+    ], id="shell", className="app"),
 ])
 
 
@@ -228,6 +236,15 @@ def _dialogo(tipo):
 
 
 # --------------------------------------------------------------------------- callbacks
+@app.callback(Output("shell", "className"), Output("btn-menu", "aria-expanded"),
+              Input("btn-menu", "n_clicks"), Input("url", "pathname"), State("shell", "className"))
+def menu(_n, _ruta, clase):
+    """El menu arranca plegado a iconos; el boton lo expande y elegir una pagina lo vuelve a plegar."""
+    abierto = "abierto" in (clase or "")
+    abierto = (not abierto) if ctx.triggered_id == "btn-menu" else False
+    return ("app abierto" if abierto else "app"), str(abierto).lower()
+
+
 @app.callback(Output("vista-cargar", "style"), Output("vista-dash", "style"),
               Output("nav-cargar", "className"), Output("nav-dash", "className"),
               Output("marco", "src"), Input("url", "pathname"))

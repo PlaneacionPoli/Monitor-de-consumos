@@ -1,5 +1,6 @@
 """Humo de la app local (Dash): el layout se construye y los callbacks no fallan sin clics."""
 import importlib.util
+import json
 import os
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -38,3 +39,18 @@ def test_dibujar_muestra_solo_el_panel_del_paso():
                            "ignorados": 0}, None, None, [])
     estilos = salida[1:5]
     assert [e["display"] for e in estilos] == ["none", "block", "none", "none"]
+
+
+def test_menu_plegado_por_defecto_y_se_expande_solo_con_el_boton(monkeypatch):
+    """La barra lateral arranca plegada a iconos; el boton la abre y elegir una pagina la pliega."""
+    m = _cargar_app()
+    from plotly.utils import PlotlyJSONEncoder
+    layout = json.dumps(m.app.layout, cls=PlotlyJSONEncoder)
+    assert '"id": "shell"' in layout and '"className": "app"' in layout and "btn-menu" in layout
+
+    monkeypatch.setattr(m, "ctx", type("C", (), {"triggered_id": "btn-menu"})())
+    assert m.menu(1, "/", "app") == ("app abierto", "true")          # el boton expande
+    assert m.menu(2, "/", "app abierto") == ("app", "false")          # y vuelve a plegar
+
+    monkeypatch.setattr(m, "ctx", type("C", (), {"triggered_id": "url"})())
+    assert m.menu(2, "/dashboard", "app abierto") == ("app", "false")  # elegir pagina pliega
