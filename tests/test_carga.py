@@ -152,3 +152,45 @@ def test_etapa_obligatoria_que_falla_si_detiene(monkeypatch):
                         lambda cmd, **kw: SimpleNamespace(returncode=1, stdout="", stderr="boom"))
     res = actualizacion.actualizar()
     assert not res["ok"] and "boom" in res["detalle"]
+
+
+def _pdf_imagen(ruta):
+    """PDF sin texto extraible (solo una imagen), como un escaneo."""
+    doc = fitz.open()
+    pagina = doc.new_page()
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 40, 40), False)
+    pix.clear_with(200)
+    pagina.insert_image(fitz.Rect(50, 50, 200, 200), pixmap=pix)
+    doc.save(str(ruta))
+    doc.close()
+
+
+def test_escaneado_sin_tesseract_da_mensaje_claro(tmp_path, monkeypatch):
+    monkeypatch.setattr(extraccion, "buscar_tesseract", lambda: None)
+    _pdf_imagen(tmp_path / "scan.pdf")
+    res = extraccion.extraer_pdf(str(tmp_path / "scan.pdf"))
+    assert res["estado"] == "ERROR" and "no tiene Tesseract" in res["motivo"] and "Instalar.bat" in res["motivo"]
+
+
+def test_escaneado_sin_idioma_espanol_da_mensaje_claro(tmp_path, monkeypatch):
+    falso_exe = tmp_path / "tesseract.exe"
+    falso_exe.write_text("x")
+    monkeypatch.setattr(extraccion, "buscar_tesseract", lambda: str(falso_exe))
+    monkeypatch.setattr(extraccion, "BASE", str(tmp_path))          # sin config/tessdata
+    monkeypatch.delenv("TESSDATA_PREFIX", raising=False)
+    _pdf_imagen(tmp_path / "scan.pdf")
+    res = extraccion.extraer_pdf(str(tmp_path / "scan.pdf"))
+    assert res["estado"] == "ERROR" and "idioma español" in res["motivo"]
+
+
+def test_buscar_tesseract_encuentra_la_variable_de_entorno(tmp_path, monkeypatch):
+    exe = tmp_path / "tesseract.exe"
+    exe.write_text("x")
+    monkeypatch.setenv("TESSERACT_PATH", str(exe))
+    assert extraccion.buscar_tesseract() == str(exe)
+
+
+def test_factura_digital_no_necesita_tesseract(tmp_path, monkeypatch):
+    monkeypatch.setattr(extraccion, "buscar_tesseract", lambda: None)
+    _pdf(tmp_path / "a.pdf", "Emvarias Empresas Varias de Medellin total aseo del periodo facturado")
+    assert extraccion.extraer_pdf(str(tmp_path / "a.pdf"))["estado"] == OMITIDA

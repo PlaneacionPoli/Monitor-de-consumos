@@ -26,7 +26,7 @@ if exist "C:\Program Files\Tesseract-OCR\tesseract.exe" (
   echo     Tesseract ya esta instalado.
 ) else (
   winget install --id UB-Mannheim.TesseractOCR -e --accept-source-agreements --accept-package-agreements
-  if errorlevel 1 echo [!] No se pudo instalar Tesseract solo. Descargalo de https://github.com/UB-Mannheim/tesseract/wiki
+  if errorlevel 1 echo [!] No se pudo instalar Tesseract solo ^(puede faltar permiso de administrador^). Descargalo de https://github.com/UB-Mannheim/tesseract/wiki o pidelo al equipo tecnico. Solo hace falta para facturas escaneadas.
 )
 if not exist "config\tessdata\spa.traineddata" (
   echo [!] Falta config\tessdata\spa.traineddata ^(idioma espanol^). Pidelo al equipo tecnico.

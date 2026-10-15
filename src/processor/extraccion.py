@@ -15,6 +15,7 @@ Uso:
 """
 import os
 import re
+import shutil
 from typing import Any, Dict, List, Optional
 
 import fitz
@@ -116,18 +117,42 @@ def _anio_mes_carpeta(origen: str):
     return int(m.group(2)), MESES_EPM.get(m.group(1).lower())
 
 
+class TesseractFaltante(OSError):
+    """Tesseract no esta instalado o le falta el idioma español; el mensaje es para el usuario."""
+
+
+MSG_SIN_TESSERACT = ("El PDF es una imagen escaneada y este equipo no tiene Tesseract para leerla. "
+                     "Instálalo con Instalar.bat o desde https://github.com/UB-Mannheim/tesseract/wiki "
+                     "y vuelve a cargar estas facturas (las facturas digitales no lo necesitan).")
+MSG_SIN_IDIOMA = ("El PDF es una imagen escaneada y a Tesseract le falta el idioma español. "
+                  "Copia spa.traineddata en la carpeta config/tessdata del proyecto y vuelve a cargar estas facturas.")
+
+
+def buscar_tesseract() -> Optional[str]:
+    """Ruta de tesseract.exe: variable TESSERACT_PATH, PATH y carpetas habituales de Windows."""
+    candidatos = [os.environ.get("TESSERACT_PATH"), shutil.which("tesseract")]
+    for var in ("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"):
+        raiz = os.environ.get(var)
+        if raiz:
+            candidatos.append(os.path.join(raiz, "Tesseract-OCR", "tesseract.exe"))
+            candidatos.append(os.path.join(raiz, "Programs", "Tesseract-OCR", "tesseract.exe"))
+    return next((c for c in candidatos if c and os.path.isfile(c)), None)
+
+
 def _preparar_tesseract() -> None:
-    """Corrige TESSDATA_PREFIX obsoleto y avisa si falta el idioma español."""
+    """Localiza Tesseract, corrige TESSDATA_PREFIX obsoleto y exige el idioma español."""
+    exe = buscar_tesseract()
+    if not exe:
+        raise TesseractFaltante(MSG_SIN_TESSERACT)
+    os.environ["TESSERACT_PATH"] = exe                 # OCREngine lo usa como tesseract_cmd
     previo = os.environ.get("TESSDATA_PREFIX")
-    candidatos = [previo, os.path.join(BASE, "config", "tessdata"),
-                  r"C:\Program Files\Tesseract-OCR	essdata"]
-    for c in candidatos:
+    for c in (previo, os.path.join(BASE, "config", "tessdata"), os.path.join(os.path.dirname(exe), "tessdata")):
         if c and os.path.isfile(os.path.join(c, "spa.traineddata")):
             os.environ["TESSDATA_PREFIX"] = c
             return
     if previo and not os.path.isdir(previo):
-        del os.environ["TESSDATA_PREFIX"]          # apunta a una carpeta que ya no existe
-    raise OSError("tesseract: falta el idioma español (spa.traineddata)")
+        del os.environ["TESSDATA_PREFIX"]              # apunta a una carpeta que ya no existe
+    raise TesseractFaltante(MSG_SIN_IDIOMA)
 
 
 def leer_texto(ruta: str, ocr=None):
@@ -202,9 +227,10 @@ def extraer_pdf(ruta: str, ocr=None, origen: Optional[str] = None) -> Dict[str, 
         texto, res["via_ocr"] = leer_texto(ruta, ocr)
     except Exception as exc:  # noqa: BLE001
         res["estado"] = ERROR
-        if isinstance(exc, (ImportError, OSError)) and "tesseract" in str(exc).lower():
-            res["motivo"] = ("El PDF es una imagen escaneada y falta instalar Tesseract "
-                             "con el idioma español para leerlo.")
+        if isinstance(exc, TesseractFaltante):
+            res["motivo"] = str(exc)
+        elif isinstance(exc, (ImportError, OSError)) and "tesseract" in str(exc).lower():
+            res["motivo"] = MSG_SIN_TESSERACT
         else:
             res["motivo"] = f"No se pudo abrir o leer el PDF ({exc})."
         return res
