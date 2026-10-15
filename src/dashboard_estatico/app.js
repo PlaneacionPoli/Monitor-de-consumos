@@ -138,6 +138,19 @@
     }
   }
 
+  // Modo local: si junto al tablero hay auto.json (solo lo genera `publicar_dashboard.py --local`), entra solo.
+  async function autoIngreso() {
+    try {
+      const r = await fetch("auto.json", { cache: "no-store" });
+      if (!r.ok) return;
+      const a = await r.json();
+      if (!a.correo || !a.contrasena) return;
+      $("correo").value = a.correo;
+      $("clave").value = a.contrasena;
+      $("form-login").requestSubmit();
+    } catch (e) { /* sitio publicado: no existe auto.json */ }
+  }
+
   function salir() {
     Object.keys(instancias).forEach((id) => { instancias[id].dispose(); delete instancias[id]; });
     datos = null;
@@ -1298,6 +1311,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     $("form-login").addEventListener("submit", ingresar);
+    autoIngreso();
     $("salir").addEventListener("click", salir);
     [["f-desde", "desde"], ["f-hasta", "hasta"]].forEach(([id, clave]) =>
       $(id).addEventListener("change", () => {

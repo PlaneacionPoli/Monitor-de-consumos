@@ -131,10 +131,9 @@ def test_dashboard_sin_correos_no_bloquea_la_actualizacion(monkeypatch):
     from src.processor import actualizacion
 
     monkeypatch.setattr(actualizacion.carga, "exportar_extraccion", lambda: "x.xlsx")
-    monkeypatch.setattr(actualizacion, "copiar_dashboard_local", lambda: False)
 
     def falso_run(cmd, **kw):
-        if "publicar_dashboard.py" in cmd[-1]:
+        if any("publicar_dashboard.py" in c for c in cmd):
             return SimpleNamespace(returncode=1, stdout="Sin correos autorizados. Agregue uno", stderr="")
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 

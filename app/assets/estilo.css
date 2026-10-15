@@ -108,3 +108,10 @@ pre.detalle{background:#F1F7FA;border:1px solid var(--borde);border-radius:10px;
 /* dashboard incrustado */
 iframe.sitio{width:100%;height:calc(100vh - 230px);min-height:620px;border:1px solid var(--borde);border-radius:14px;background:#fff;box-shadow:var(--sombra)}
 .barra-sup{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.8rem}
+
+/* dashboard a pantalla completa */
+.principal.completa{padding:0;max-width:none;width:100%}
+.principal.completa iframe.sitio{width:100%;height:100vh;min-height:0;border:0;border-radius:0;box-shadow:none;display:block}
+.flotante{position:fixed;right:18px;bottom:18px;z-index:30;display:flex;flex-direction:column;align-items:flex-end;gap:.5rem}
+.flotante-btn{box-shadow:var(--sombra);font-size:.82rem;padding:.45rem .9rem!important}
+@media(max-width:860px){.principal.completa iframe.sitio{height:calc(100vh - 70px)}}

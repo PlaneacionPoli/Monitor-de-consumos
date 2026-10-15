@@ -23,8 +23,9 @@ def test_layout_y_rutas():
 
 def test_pagina_marca_activa_la_ruta():
     m = _cargar_app()
-    cargar, dash_, nav1, nav2, _ = m.pagina("/dashboard")
+    cargar, dash_, nav1, nav2, _, clase = m.pagina("/dashboard")
     assert cargar == {"display": "none"} and nav2 == "activo" and nav1 == ""
+    assert clase == "principal completa"       # el dashboard ocupa toda la pantalla
 
 
 def test_lista_vacia_deshabilita_continuar():
@@ -56,10 +57,15 @@ def test_menu_plegado_por_defecto_y_se_expande_solo_con_el_boton(monkeypatch):
     assert m.menu(2, "/dashboard", "app abierto") == ("app", "false")  # elegir pagina pliega
 
 
-def test_dashboard_se_sirve_desde_site_sin_copias():
-    """/sitio/ entrega siempre lo que hay en site/ (una copia vieja daba 'credenciales incorrectas')."""
+def test_dashboard_local_se_sirve_desde_su_carpeta(tmp_path, monkeypatch):
+    """/sitio/ entrega siempre lo que hay en data/outputs/sitio_local (sin copias que se queden viejas)."""
     m = _cargar_app()
+    monkeypatch.setattr(m.actualizacion, "SITIO_LOCAL", str(tmp_path))
     cliente = m.server.test_client()
-    esperado = open(os.path.join(BASE, "site", "data.enc.json"), "rb").read()
-    assert cliente.get("/sitio/data.enc.json").data == esperado
-    assert cliente.get("/sitio/index.html").status_code == 200
+    assert cliente.get("/sitio/index.html").status_code == 404          # aun no generado
+    assert b"Todav" in cliente.get("/sin-dashboard").data
+    (tmp_path / "index.html").write_text("<html>ok</html>")
+    (tmp_path / "data.enc.json").write_text("v1")
+    assert cliente.get("/sitio/data.enc.json").data == b"v1"
+    (tmp_path / "data.enc.json").write_text("v2")
+    assert cliente.get("/sitio/data.enc.json").data == b"v2"

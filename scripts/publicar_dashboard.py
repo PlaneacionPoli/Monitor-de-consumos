@@ -16,8 +16,10 @@ Limites: quitar a un usuario solo cierra el acceso a los datos publicados DESDE
 la siguiente corrida (la clave de datos se rota); las copias anteriores del
 repositorio siguen siendo descifrables por quien ya tenia acceso.
 
-Uso: python scripts/publicar_dashboard.py
+Uso: python scripts/publicar_dashboard.py            (sitio publicado en site/)
+     python scripts/publicar_dashboard.py --local    (dashboard del equipo, ingreso automatico)
 """
+import argparse
 import base64
 import csv
 import glob
@@ -46,6 +48,8 @@ from src.storage.repositorio import clave_registro  # noqa: E402
 SALIDAS = os.path.join(BASE, "data", "outputs")
 PLANTILLA = os.path.join(BASE, "src", "dashboard_estatico")
 SITIO = os.path.join(BASE, "site")
+SITIO_LOCAL = os.path.join(SALIDAS, "sitio_local")      # uso local: no se versiona ni se publica
+CORREO_LOCAL = "local@este-equipo.local"
 RUTA_CORREOS = os.path.join(BASE, "config", "accesos_dashboard.txt")
 RUTA_CLAVES = rutas.ruta("accesos_dashboard.csv")
 ITERACIONES = 600_000
@@ -180,33 +184,53 @@ def cifrar(datos: dict, claves: dict) -> dict:
             "usuarios": usuarios}
 
 
-def main():
-    correos = leer_correos()
-    if not correos:
-        os.makedirs(os.path.dirname(RUTA_CORREOS), exist_ok=True)
-        if not os.path.exists(RUTA_CORREOS):
-            with open(RUTA_CORREOS, "w", encoding="utf-8") as f:
-                f.write("# Un correo autorizado por linea. Este archivo no se versiona.\n")
-        print(f"Sin correos autorizados. Agregue uno por linea en {RUTA_CORREOS}")
-        return 1
-    claves = asignar_contrasenas(correos)
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="Publica el dashboard cifrado (site/) o lo prepara para uso local.")
+    ap.add_argument("--local", action="store_true",
+                    help="modo local: genera data/outputs/sitio_local con ingreso automatico, sin correos ni claves")
+    args = ap.parse_args(argv)
+
+    if args.local:
+        # Uso en el equipo del usuario: un solo usuario local con clave aleatoria que el tablero lee de
+        # auto.json (solo existe en esta carpeta; nunca se publica). No toca site/ ni los accesos.
+        correos, destino = [CORREO_LOCAL], SITIO_LOCAL
+        claves = {CORREO_LOCAL: secrets.token_urlsafe(15)}
+    else:
+        correos, destino = leer_correos(), SITIO
+        if not correos:
+            os.makedirs(os.path.dirname(RUTA_CORREOS), exist_ok=True)
+            if not os.path.exists(RUTA_CORREOS):
+                with open(RUTA_CORREOS, "w", encoding="utf-8") as f:
+                    f.write("# Un correo autorizado por linea. Este archivo no se versiona.\n")
+            print(f"Sin correos autorizados. Agregue uno por linea en {RUTA_CORREOS}")
+            return 1
+        claves = asignar_contrasenas(correos)
     datos = construir_datos()
     blob = cifrar(datos, claves)
 
-    os.makedirs(SITIO, exist_ok=True)
+    os.makedirs(destino, exist_ok=True)
     for nombre in ARCHIVOS_SITIO:
-        shutil.copy2(os.path.join(PLANTILLA, nombre), os.path.join(SITIO, nombre))
+        shutil.copy2(os.path.join(PLANTILLA, nombre), os.path.join(destino, nombre))
     for nombre in VENDOR:
-        shutil.copy2(os.path.join(PLANTILLA, "vendor", nombre), os.path.join(SITIO, nombre))
-    with open(os.path.join(SITIO, "data.enc.json"), "w", encoding="utf-8") as f:
+        shutil.copy2(os.path.join(PLANTILLA, "vendor", nombre), os.path.join(destino, nombre))
+    with open(os.path.join(destino, "data.enc.json"), "w", encoding="utf-8") as f:
         json.dump(blob, f)
-    open(os.path.join(SITIO, ".nojekyll"), "w").close()
+    open(os.path.join(destino, ".nojekyll"), "w").close()
+    auto = os.path.join(destino, "auto.json")
+    if args.local:
+        with open(auto, "w", encoding="utf-8") as f:
+            json.dump({"correo": CORREO_LOCAL, "contrasena": claves[CORREO_LOCAL]}, f)
+    elif os.path.exists(auto):
+        os.remove(auto)          # nunca debe viajar en el sitio publicado
 
     print(f"Fuente: {datos['fuente']} | facturas: {len(datos['facturas'])} | "
           f"faltantes: {len(datos['faltantes'])}")
-    print(f"Usuarios autorizados: {len(correos)}")
-    print(f"Contrasenas (no versionar): {RUTA_CLAVES}")
-    print(f"Sitio cifrado: {SITIO}")
+    if args.local:
+        print(f"Dashboard local (ingreso automatico): {destino}")
+    else:
+        print(f"Usuarios autorizados: {len(correos)}")
+        print(f"Contrasenas (no versionar): {RUTA_CLAVES}")
+        print(f"Sitio cifrado: {destino}")
     return 0
 
 

@@ -167,15 +167,11 @@ vista_cargar = html.Div([
 ], id="vista-cargar")
 
 vista_dashboard = html.Div([
-    cabecera("Dashboard", "Dashboard oficial: vistas Ejecutiva y Operativa. "
-                          "Ingresa con tu correo y contraseña de acceso"),
-    html.Div([
-        html.Span("Los datos se actualizan al pulsar «Actualizar el archivo» en Cargar facturas.",
-                  className="suave pequeno"),
-        html.Button("Regenerar con los últimos datos", id="btn-regen", n_clicks=0, className="btn"),
-    ], className="barra-sup"),
-    dcc.Loading(html.Div(id="msg-regen"), type="dot", color="#22B2DE"),
     html.Iframe(id="marco", className="sitio", title="Dashboard de consumos"),
+    html.Div([
+        dcc.Loading(html.Div(id="msg-regen"), type="dot", color="#22B2DE"),
+        html.Button("Regenerar con los últimos datos", id="btn-regen", n_clicks=0, className="btn flotante-btn"),
+    ], className="flotante"),
 ], id="vista-dash", style={"display": "none"})
 
 app.layout = html.Div([
@@ -200,7 +196,7 @@ app.layout = html.Div([
             ], className="nav"),
             html.Div("Monitor de Consumos Ambientales · Politécnico Grancolombiano", className="pie"),
         ], className="lateral"),
-        html.Main([vista_cargar, vista_dashboard], className="principal"),
+        html.Main([vista_cargar, vista_dashboard], id="principal", className="principal"),
     ], id="shell", className="app"),
 ])
 
@@ -208,10 +204,19 @@ app.layout = html.Div([
 # --------------------------------------------------------------------------- servidor
 @server.route("/sitio/<path:ruta>")
 def sitio(ruta):
-    """Sirve site/ (dashboard HTML oficial) directamente, sin copias: siempre es la version actual."""
-    if not os.path.isfile(os.path.join(actualizacion.SITIO, "index.html")):
+    """Sirve el dashboard local (data/outputs/sitio_local) directamente, sin copias."""
+    if not os.path.isfile(os.path.join(actualizacion.SITIO_LOCAL, "index.html")):
         abort(404)
-    return send_from_directory(actualizacion.SITIO, ruta, max_age=0)
+    return send_from_directory(actualizacion.SITIO_LOCAL, ruta, max_age=0)
+
+
+@server.route("/sin-dashboard")
+def sin_dashboard():
+    return ("<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
+            "<body style=\"margin:0;display:grid;place-items:center;height:100vh;background:#F1F7FA;"
+            "color:#263A58;font:16px Montserrat,system-ui,sans-serif;text-align:center\">"
+            "<div><h2>Todavía no hay dashboard</h2><p>Carga facturas y pulsa «Actualizar el archivo», "
+            "o usa «Regenerar» (abajo a la derecha).</p></div>")
 
 
 def _dialogo(tipo):
@@ -245,13 +250,15 @@ def menu(_n, _ruta, clase):
 
 @app.callback(Output("vista-cargar", "style"), Output("vista-dash", "style"),
               Output("nav-cargar", "className"), Output("nav-dash", "className"),
-              Output("marco", "src"), Input("url", "pathname"))
+              Output("marco", "src"), Output("principal", "className"), Input("url", "pathname"))
 def pagina(ruta):
     en_dash = (ruta or "").rstrip("/") == "/dashboard"
     mostrar, ocultar = {"display": "block"}, {"display": "none"}
+    hay = os.path.isfile(os.path.join(actualizacion.SITIO_LOCAL, "index.html"))
+    src = (f"/sitio/index.html?t={int(time.time())}" if hay else "/sin-dashboard") if en_dash else no_update
     return (ocultar if en_dash else mostrar, mostrar if en_dash else ocultar,
-            "" if en_dash else "activo", "activo" if en_dash else "",
-            f"/sitio/index.html?t={int(time.time())}" if en_dash else no_update)
+            "" if en_dash else "activo", "activo" if en_dash else "", src,
+            "principal completa" if en_dash else "principal")
 
 
 @app.callback(Output("st-sel", "data"), Output("msg-seleccion", "children"), Output("in-ruta", "value"),
@@ -421,11 +428,11 @@ def dibujar(paso, plan, res, final, forzar):
 def regenerar(n):
     if not n:
         return no_update
-    r = subprocess.run([sys.executable, "scripts/publicar_dashboard.py"], cwd=BASE, capture_output=True,
+    r = subprocess.run([sys.executable, "scripts/publicar_dashboard.py", "--local"], cwd=BASE, capture_output=True,
                        text=True, encoding="utf-8", errors="replace")
     if r.returncode != 0:
         return html.Div(actualizacion._aviso_dashboard((r.stderr or r.stdout)[-1200:]), className="aviso error")
-    return html.Div("Dashboard actualizado. Recarga la página para verlo.", className="aviso ok")
+    return html.Div("Dashboard actualizado. Recarga la página (F5) para verlo.", className="aviso ok")
 
 
 def main():

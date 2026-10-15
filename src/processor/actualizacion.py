@@ -3,7 +3,7 @@ Actualizacion del archivo final despues de una carga: encadena las etapas de la
 cadena existente sobre lo acumulado por carga.py.
 
 Etapas: extraccion (libro acumulado) -> consolidar -> validar -> alertas ->
-almacen -> exportar libro -> dashboard HTML (site/, cifrado) -> ordenar. Cada etapa tiene un nombre legible para
+almacen -> exportar libro -> dashboard local -> ordenar. Cada etapa tiene un nombre legible para
 mostrarlo en la app. Se detiene en la primera que falle y lo informa.
 
 Uso:
@@ -27,22 +27,12 @@ ETAPAS = [
     ("Generando alertas", "scripts/generar_alertas.py", False),
     ("Guardando en el almacén de datos", "scripts/cargar_almacen.py", False),
     ("Actualizando el archivo Consumos_Consolidado.xlsx", "scripts/exportar_consolidado.py", False),
-    ("Actualizando el dashboard", "scripts/publicar_dashboard.py", True),
+    ("Actualizando el dashboard", "scripts/publicar_dashboard.py --local", True),
     ("Ordenando archivos de salida", "scripts/ordenar_outputs.py", False),
 ]
 
 LIBRO_FINAL = os.path.join(BASE, "data", "outputs", "Consumos_Consolidado.xlsx")
-SITIO = os.path.join(BASE, "site")
-SITIO_LOCAL = os.path.join(BASE, "app", "static", "dashboard")   # copia que sirve Streamlit
-
-
-def copiar_dashboard_local() -> bool:
-    """Copia site/ (dashboard HTML oficial) a la carpeta estatica de la app."""
-    if not os.path.isfile(os.path.join(SITIO, "index.html")):
-        return False
-    shutil.rmtree(SITIO_LOCAL, ignore_errors=True)
-    shutil.copytree(SITIO, SITIO_LOCAL, dirs_exist_ok=True)   # tolera archivos bloqueados por el visor
-    return True
+SITIO_LOCAL = os.path.join(BASE, "data", "outputs", "sitio_local")   # dashboard del equipo (ingreso automatico)
 
 
 def _aviso_dashboard(detalle: str) -> str:
@@ -67,7 +57,7 @@ def actualizar(avance: Optional[Callable[[int, int, str], None]] = None) -> Dict
     for i, (nombre, script, opcional) in enumerate(ETAPAS, 1):
         if avance:
             avance(i, total, nombre)
-        r = subprocess.run([sys.executable, script], cwd=BASE, capture_output=True,
+        r = subprocess.run([sys.executable, *script.split()], cwd=BASE, capture_output=True,
                            text=True, encoding="utf-8", errors="replace")
         if r.returncode != 0:
             detalle = (r.stderr or r.stdout)[-1500:]
