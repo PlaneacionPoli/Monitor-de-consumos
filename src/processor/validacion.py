@@ -201,4 +201,15 @@ def validar_base(base: pd.DataFrame, umbral: float = UMBRAL):
     base.loc[base["sin_serie"], "detalle"] = (
         "sin medidor identificable (direccion pendiente o ausente)")
 
-    return base, marcar_atipicos(base, umbral)
+    atipicos = marcar_atipicos(base, umbral)
+
+    # El estado no cambia, pero el comentario explica por que el dato requiere cuidado
+    # (p. ej. consumo estimado por el prestador, distinto de la diferencia de lecturas).
+    if "nota_consumo" in base.columns:
+        nota = base["nota_consumo"].fillna("").astype(str).str.strip()
+        con_nota = nota != ""
+        vacio = base["detalle"].fillna("") == ""
+        base.loc[con_nota & vacio, "detalle"] = nota[con_nota & vacio]
+        base.loc[con_nota & ~vacio, "detalle"] = (
+            base.loc[con_nota & ~vacio, "detalle"].astype(str) + " | " + nota[con_nota & ~vacio])
+    return base, atipicos

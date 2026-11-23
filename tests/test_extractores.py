@@ -21,6 +21,8 @@ from src.extractor.prestadores_csu import (  # noqa: E402
     _barcode_total,
     _parse_dmy,
     extraer_afinia,
+    extraer_aire,
+    extraer_emcali,
     extraer_villavicencio,
 )
 from src.processor.batch_epm import normalizar_periodo_epm  # noqa: E402
@@ -322,3 +324,39 @@ def test_faltantes_corte_por_prestador_evita_falsas_alertas():
     enel["prestador"] = "Enel"
     # EPM termina en 2025 y Enel en 2026: cada serie se evalua contra su prestador.
     assert detectar_faltantes(pd.concat([epm, enel])) == []
+
+
+def test_eaab_consumo_desde_medidor_no_historico():
+    # Calle 84 sep-2026: el grafico sale "6 7 14 85" (no cronologico); el consumo
+    # del periodo es lectura actual - anterior (1689 - 1682 = 7), no el ultimo valor.
+    texto = ("ULTIMO\nCONSUMO\n6\n7\n14\n85\n"
+             "(415)7707200485271(8020)105295682130(3900)000000135310\n"
+             "7.000\n119\n40\n1689\n1682\nBajo consumo\n0\n$135.310\n")
+    assert extraer_eaab(texto, "m.pdf")["consumo_m3"] == 7.0
+    # Campus: litros sin separador de miles y promedio con punto
+    texto = ("ULTIMO\nCONSUMO\n799\n1069\n1265\n"
+             "(3900)000010394060\n1250000\n43.103\n1124\n27516\n26266\n"
+             "Consumo Normal\n0\n")
+    assert extraer_eaab(texto, "m.pdf")["consumo_m3"] == 1250.0
+
+
+def test_aire_consumo_desde_lecturas():
+    # Barranquilla: los dos "kWh" son lectura inicial/final; consumo = diferencia
+    texto = ("Codigo Interno:\nFactura No.:\n1025123\n6099542\n"
+             "31/12/2025 a 29/01/2026\n624.00\n22.566,00 kWh\n23.190,00 kWh\n")
+    datos = extraer_aire(texto, "m.pdf")
+    assert datos["consumo_kwh"] == 624.0
+    # sin lecturas legibles: valor suelto repetido (formato US con coma de miles)
+    texto = "Factura No.:\n0\n854.00\n1.00\n854.00\n173.00\n854.00\nfin\n"
+    assert extraer_aire(texto, "m.pdf")["consumo_kwh"] == 854.0
+
+
+def test_emcali_consumo_estimado_con_observacion():
+    # EmCali sep-2026: entre "Diferencia" y "Consumo Actual" hay observaciones de lectura
+    texto = ("ENERGIA\nLectura Actual\n73,142\nLectura Anterior\n72,800\nDiferencia\n342\n"
+             "Observacion de Lectura\n \nConsumo En Investigacion - Consumo Estimado\n"
+             "Consumo Actual\n1,079 KWH\nCONCEPTOS\nTOTAL\n$1,192,905.07\n")
+    energia = extraer_emcali(texto, "m.pdf")["energia"]
+    assert energia["consumo_kwh"] == 1079.0
+    assert energia["consumo_estimado"] is True
+    assert "342" in energia["_pendiente_visual"]

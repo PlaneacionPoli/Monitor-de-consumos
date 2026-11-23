@@ -69,7 +69,9 @@ def normalizar(df: pd.DataFrame, servicio_por_defecto: str) -> pd.DataFrame:
         unidad = "kWh"
         if consumo is None:
             consumo = _numero(r, ["consumo_m3", "CONSUMO M3"])
-            unidad = "m3"
+            # sin consumo en ninguna columna, la unidad la da el servicio (no "m3" por defecto)
+            es_energia = str(r.get("servicio") or servicio_por_defecto).lower().startswith("energ")
+            unidad = "kWh" if consumo is None and es_energia else "m3"
         valor = _numero(r, ["valor_factura", "VALOR FACT.", "valor_total", "VALOR TOTAL"])
         # El aseo viaja dentro del recibo (EPM, Enel, Triple A): se separa del servicio.
         aseo = _numero(r, ["valor_aseo", "VALOR ASEO", "RECOLECCION BASURAS"]) or 0.0
@@ -113,6 +115,9 @@ def normalizar(df: pd.DataFrame, servicio_por_defecto: str) -> pd.DataFrame:
             "archivo": r.get("archivo_origen") or r.get("ARCHIVO ORIGEN"),
             "direccion": r.get("direccion") or r.get("DIRECCION"),
             "periodo_fuente": r.get("PERIODO FUENTE") or r.get("periodo_fuente"),
+            # El porque del dato dudoso (p. ej. consumo estimado por el prestador) viaja al dashboard.
+            "nota_consumo": (r.get("_pendiente_visual")
+                             if r.get("consumo_estimado") in (True, "True", "TRUE", 1) else None),
         })
     return pd.DataFrame(filas)
 

@@ -376,3 +376,5 @@ dialog#detalle[open]{animation:pop .22s ease-out}
 
 /* Pie de tabla con los totales de todo lo filtrado */
 table tfoot td { font-weight: 700; border-top: 2px solid var(--borde); background: rgba(120,140,160,.10); }
+.leyenda-mapa{display:flex;flex-wrap:wrap;gap:.4rem 1rem;margin:.5rem 0;font-size:.8rem;color:#263A58}
+.leyenda-mapa i{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;margin-right:.35rem;vertical-align:-1px}
