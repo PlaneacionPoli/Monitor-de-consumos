@@ -134,6 +134,7 @@
       </div>
     </div>
     <div class="f-fila">
+      <div class="combo" id="c-ciudad"></div>
       <div class="combo" id="c-sede"></div>
       <div class="combo" id="c-prestador"></div>
       <div class="chips-fila">
@@ -164,6 +165,14 @@
         <p id="sin-sede" class="suave pequeno"></p>
       </div>
     </div>
+    <section class="tarjeta" id="tarjeta-prorrateo" aria-label="Consumo mensual prorrateado">
+      <div class="cab-tarjeta"><h2 id="t-prorrateo" class="con-icono" data-icono="calendario">Consumo mensual prorrateado</h2>
+        <div class="segmento chico" id="u-prorrateo" role="group" aria-label="Unidad">
+          <button data-u="kWh" aria-pressed="true">kWh</button><button data-u="m3" aria-pressed="false">m³</button>
+        </div></div>
+      <p class="suave pequeno">Los recibos que cubren varios meses (p. ej. bimestrales de marzo y abril) se reparten en partes iguales entre los meses que cubren; así cada mes refleja su consumo real.</p>
+      <div id="g-prorrateo" class="grafico-ec"></div>
+    </section>
     <section class="tarjeta" id="tarjeta-mapa" aria-label="Mapa de sedes">
       <div class="cab-tarjeta"><h2 id="t-mapa" class="con-icono" data-icono="pin">Mapa de sedes</h2>
         <div class="segmento chico" id="u-mapa" role="group" aria-label="Medida del mapa">

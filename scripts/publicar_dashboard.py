@@ -30,6 +30,7 @@ import secrets
 import shutil
 import sqlite3
 import sys
+import unicodedata
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -106,6 +107,20 @@ def mapa_sedes() -> dict:
     return mapa
 
 
+CIUDADES_SEDE = [  # (patron sobre la sede sin tildes y en mayusculas, ciudad); el orden importa
+    ("BOGOTA", "Bogotá"), ("MEDELLIN", "Medellín"), ("BOSA", "Bogotá"), ("PORTAL 80", "Bogotá"),
+    ("SOACHA", "Soacha"), ("ZIPAQUIRA", "Zipaquirá"), ("CHIA", "Chía"), ("CARTAGENA", "Cartagena"),
+    ("BARRANQUILLA", "Barranquilla"), ("CALI", "Cali"), ("BELLO", "Bello"),
+    ("VILLAVICENCIO", "Villavicencio"),
+]
+
+
+def ciudad_de_sede(sede) -> str:
+    """Ciudad de una sede ya mapeada ('BOGOTA-CAMPUS', 'CSU CALI'...); 'Sin ciudad' si no se reconoce."""
+    t = unicodedata.normalize("NFD", str(sede or "")).encode("ascii", "ignore").decode().upper()
+    return next((c for p, c in CIUDADES_SEDE if p in t), "Sin ciudad")
+
+
 def estados_almacen() -> dict:
     ruta = rutas.ruta("monitor.db")
     if not os.path.exists(ruta):
@@ -143,7 +158,7 @@ def construir_datos() -> dict:
     for r in base.to_dict("records"):
         r = {k: limpio(v) for k, v in r.items()}
         filas.append({
-            "sede": r["sede_final"], "prestador": r.get("prestador"),
+            "sede": r["sede_final"], "ciudad": ciudad_de_sede(r["sede_final"]), "prestador": r.get("prestador"),
             "servicio": r.get("servicio"), "factura": r.get("factura"),
             "cuenta": r.get("cuenta"), "direccion": r.get("direccion"),
             "archivo": r.get("archivo"), "periodo_inicio": r.get("periodo_inicio"),

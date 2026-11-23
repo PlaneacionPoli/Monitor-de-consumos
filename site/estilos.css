@@ -368,3 +368,11 @@ dialog#detalle[open]{animation:pop .22s ease-out}
 #tarjeta-mapa{margin:1rem 0}
 .mapa-ec{height:540px;border-radius:10px;background:#F7FBFD}
 @media(max-width:640px){.mapa-ec{height:380px}}
+
+/* Casilla de las listas de seleccion multiple (ciudad, sede) */
+.combo-op .op-check { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px;
+  margin-right: 6px; border: 1.5px solid #8aa0b3; border-radius: 4px; font-size: 12px; line-height: 1; flex: none; }
+.combo-op[aria-selected="true"] .op-check { background: #1ab3d6; border-color: #1ab3d6; color: #fff; }
+
+/* Pie de tabla con los totales de todo lo filtrado */
+table tfoot td { font-weight: 700; border-top: 2px solid var(--borde); background: rgba(120,140,160,.10); }

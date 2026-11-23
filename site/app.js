@@ -35,7 +35,14 @@
   let geoColombia = null;
   const pag = { cola: 0, facturas: 0 };
   // Filtros globales. desde/hasta = "AAAA-MM". estado se fija desde el grafico.
-  const F = { servicio: TODOS, sede: TODOS, prestador: TODOS, desde: TODOS, hasta: TODOS, estado: TODOS };
+  // ciudad y sede son de seleccion multiple: arreglo vacio = todas.
+  const MULTI = ["ciudad", "sede"];
+  const F = { servicio: TODOS, ciudad: [], sede: [], prestador: TODOS, desde: TODOS, hasta: TODOS, estado: TODOS };
+  const vacioF = (k) => (MULTI.includes(k) ? [] : TODOS);
+  const sinFiltro = (k) => (MULTI.includes(k) ? F[k].length === 0 : F[k] === TODOS);
+  const limpiarFiltros = () => Object.keys(F).forEach((k) => { F[k] = vacioF(k); });
+  const alternar = (k, v) => { F[k] = F[k].includes(v) ? F[k].filter((x) => x !== v) : [...F[k], v]; };
+  const sedeElegida = (s) => F.sede.includes(s) || (F.sede.includes("CSU") && /^CSU\b/.test(s || ""));
   let hallazgo = TODOS;
 
   // ---------- utilidades DOM ----------
@@ -138,6 +145,19 @@
     }
   }
 
+  // Modo local: si junto al tablero hay auto.json (solo lo genera `publicar_dashboard.py --local`), entra solo.
+  async function autoIngreso() {
+    try {
+      const r = await fetch("auto.json", { cache: "no-store" });
+      if (!r.ok) return;
+      const a = await r.json();
+      if (!a.correo || !a.contrasena) return;
+      $("correo").value = a.correo;
+      $("clave").value = a.contrasena;
+      $("form-login").requestSubmit();
+    } catch (e) { /* sitio publicado: no existe auto.json */ }
+  }
+
   function salir() {
     Object.keys(instancias).forEach((id) => { instancias[id].dispose(); delete instancias[id]; });
     datos = null;
@@ -167,7 +187,8 @@
 
   function pasa(r, sinTiempo) {
     return (F.servicio === TODOS || r.servicio === F.servicio) &&
-      (F.sede === TODOS || r.sede === F.sede || (F.sede === GRUPO_CSU && esCsu(r.sede))) &&
+      (!F.ciudad.length || F.ciudad.includes(r.ciudad)) &&
+      (!F.sede.length || sedeElegida(r.sede)) &&
       (F.prestador === TODOS || r.prestador === F.prestador) &&
       (F.estado === TODOS || r.estado === F.estado) &&
       (sinTiempo || ((F.desde === TODOS || (r.ymes && r.ymes >= F.desde)) &&
@@ -178,7 +199,7 @@
   // Conteo de facturas por valor de `campo` aplicando todos los filtros menos el de `clave`.
   function conteo(clave, campo) {
     const previo = F[clave];
-    F[clave] = TODOS;
+    F[clave] = vacioF(clave);
     const m = {};
     datos.facturas.forEach((r) => { if (pasa(r)) m[r[campo]] = (m[r[campo]] || 0) + 1; });
     F[clave] = previo;
@@ -192,7 +213,8 @@
 
   function fijar(clave, valor) {
     // Un segundo clic sobre el mismo valor lo quita (alternar).
-    F[clave] = F[clave] === valor ? TODOS : valor;
+    if (MULTI.includes(clave)) alternar(clave, valor);
+    else F[clave] = F[clave] === valor ? TODOS : valor;
     resetPag();
     renderizar();
   }
@@ -265,12 +287,26 @@
       const b = el("button", null, "combo-op" + (hijo ? " hijo" : ""));
       b.type = "button";
       b.setAttribute("role", "option");
-      b.setAttribute("aria-selected", String(F[cfg.clave] === o.v));
+      const multi = MULTI.includes(cfg.clave);
+      b.setAttribute("aria-selected", String(multi
+        ? (o.v === TODOS ? F[cfg.clave].length === 0 : F[cfg.clave].includes(o.v))
+        : F[cfg.clave] === o.v));
+      if (multi && o.v !== TODOS) {   // casilla visual de seleccion multiple
+        const cb = el("span", F[cfg.clave].includes(o.v) ? "✓" : "", "op-check");
+        b.appendChild(cb);
+      }
       if (o.icono) b.appendChild(icono(o.icono));
       b.appendChild(el("span", o.t, "op-t"));
       b.appendChild(el("small", fmt.format(o.n || 0)));
       if (!o.n && o.v !== TODOS) b.classList.add("sin");
-      b.addEventListener("click", () => { F[cfg.clave] = o.v; resetPag(); cerrar(); renderizar(); });
+      b.addEventListener("click", () => {
+        if (multi) {   // multiple: alterna y deja el panel abierto; "Todas" limpia la seleccion
+          if (o.v === TODOS) F[cfg.clave] = []; else alternar(cfg.clave, o.v);
+          resetPag(); renderizar();
+          return;
+        }
+        F[cfg.clave] = o.v; resetPag(); cerrar(); renderizar();
+      });
       return b;
     }
     function dibujar() {
@@ -309,8 +345,11 @@
       caja, cerrar,
       refrescar() {
         const v = F[cfg.clave];
-        valor.textContent = v === TODOS ? cfg.todos : (cfg.etiqueta ? cfg.etiqueta(v) : v);
-        btn.classList.toggle("activo", v !== TODOS);
+        const et = (x) => (cfg.etiqueta ? cfg.etiqueta(x) : x);
+        if (MULTI.includes(cfg.clave)) {
+          valor.textContent = !v.length ? cfg.todos : v.length === 1 ? et(v[0]) : `${v.length} seleccionadas`;
+        } else valor.textContent = v === TODOS ? cfg.todos : et(v);
+        btn.classList.toggle("activo", !sinFiltro(cfg.clave));
         if (abiertoC) dibujar();
       },
     };
@@ -318,6 +357,14 @@
 
   function crearCombos() {
     if (combos["c-sede"]) return;
+    crearCombo("c-ciudad", {
+      clave: "ciudad", titulo: "Ciudad", icono: "pin", todos: "Todas las ciudades",
+      total: () => Object.values(conteo("ciudad", "ciudad")).reduce((a, b) => a + b, 0),
+      opciones: () => {
+        const cnt = conteo("ciudad", "ciudad");
+        return unicos("ciudad").map((v) => ({ v, t: v, n: cnt[v] || 0, icono: "pin" }));
+      },
+    });
     crearCombo("c-sede", {
       clave: "sede", titulo: "Sede", icono: "edificio", todos: "Todas las sedes", etiqueta: etiquetaSede,
       total: () => Object.values(conteo("sede", "sede")).reduce((a, b) => a + b, 0),
@@ -352,21 +399,27 @@
     const caja = $("chips");
     vaciar(caja);
     const etiquetas = {
-      servicio: "Servicio", sede: "Sede", prestador: "Prestador", desde: "Desde", hasta: "Hasta", estado: "Estado" };
+      servicio: "Servicio", ciudad: "Ciudad", sede: "Sede", prestador: "Prestador", desde: "Desde", hasta: "Hasta", estado: "Estado" };
     let activos = 0;
     Object.keys(F).forEach((k) => {
-      if (F[k] === TODOS) return;
-      activos += 1;
-      const c = el("span", null, "chip");
-      const valor = k === "estado" ? etiquetaEstado(F[k]) : k === "sede" ? etiquetaSede(F[k]) : k === "servicio" ? etiquetaServicio(F[k]) : F[k];
-      c.appendChild(el("span", `${etiquetas[k]}: ${valor}`));
-      const x = el("button", null, "chip-x");
-      x.type = "button";
-      x.setAttribute("aria-label", `Quitar filtro ${etiquetas[k]}`);
-      x.appendChild(icono("x"));
-      x.addEventListener("click", () => { F[k] = TODOS; resetPag(); renderizar(); });
-      c.appendChild(x);
-      caja.appendChild(c);
+      if (sinFiltro(k)) return;
+      // En los filtros multiples hay un chip por valor elegido.
+      (MULTI.includes(k) ? F[k] : [F[k]]).forEach((v) => {
+        activos += 1;
+        const c = el("span", null, "chip");
+        const valor = k === "estado" ? etiquetaEstado(v) : k === "sede" ? etiquetaSede(v) : k === "servicio" ? etiquetaServicio(v) : v;
+        c.appendChild(el("span", `${etiquetas[k]}: ${valor}`));
+        const x = el("button", null, "chip-x");
+        x.type = "button";
+        x.setAttribute("aria-label", `Quitar filtro ${etiquetas[k]}: ${valor}`);
+        x.appendChild(icono("x"));
+        x.addEventListener("click", () => {
+          if (MULTI.includes(k)) alternar(k, v); else F[k] = TODOS;
+          resetPag(); renderizar();
+        });
+        c.appendChild(x);
+        caja.appendChild(c);
+      });
     });
     $("limpiar").hidden = activos === 0;
   }
@@ -374,7 +427,7 @@
   function iniciar() {
     $("meta").textContent =
       `Datos generados el ${datos.generado} · fuente ${datos.fuente} · ${datos.facturas.length} filas`;
-    Object.keys(F).forEach((k) => { F[k] = TODOS; });
+    limpiarFiltros();
     hallazgo = TODOS;
     resetPag();
     abierto.rank = false; abierto.sem = false;
@@ -404,6 +457,7 @@
     kpisEjecutivos(filas);
     graficoMensual("g-energia", "kWh", css("--energia"));
     graficoMensual("g-agua", "m3", css("--agua"));
+    graficoProrrateo();
     graficoSedes(filas);
     graficoMapa(filas);
     calidad(filas);
@@ -675,6 +729,83 @@
     chart.resize();
   }
 
+  // ---------- consumo mensual prorrateado ----------
+  // Un recibo de varios meses (dias ~60) se reparte en partes iguales entre los meses que cubre,
+  // terminando en su mes de referencia (ymes = mes de fin del periodo). Un recibo normal cae entero en su mes.
+  let unidadProrrateo = "kWh";
+  const mesAnterior = (ym, k) => {
+    let [a, m] = ym.split("-").map(Number);
+    m -= k;
+    while (m < 1) { m += 12; a -= 1; }
+    return `${a}-${String(m).padStart(2, "0")}`;
+  };
+  const mesesCubiertos = (r) => {
+    const n = Math.max(1, r.bimestral ? 2 : Math.round((Number(r.dias) || 30) / 30));
+    return Array.from({ length: n }, (_, i) => mesAnterior(r.ymes, n - 1 - i));
+  };
+
+  function graficoProrrateo() {
+    const id = "g-prorrateo", unidad = unidadProrrateo, nodo = $(id);
+    const u = unidad === "kWh" ? "kWh" : "m³";
+    $("t-prorrateo").lastChild.textContent = ` Consumo mensual prorrateado · ${u}`;
+    const filas = filtradas(true).filter((r) => r.unidad === unidad && r.ymes);
+    const propio = {}, repartido = {}, multi = {};
+    filas.forEach((r) => {
+      const meses = mesesCubiertos(r), parte = (Number(r.consumo) || 0) / meses.length;
+      meses.forEach((m) => {
+        if (meses.length === 1) propio[m] = (propio[m] || 0) + parte;
+        else { repartido[m] = (repartido[m] || 0) + parte; multi[m] = (multi[m] || 0) + 1; }
+      });
+    });
+    const meses = [...new Set([...Object.keys(propio), ...Object.keys(repartido)])].sort();
+    if (!meses.length) {
+      if (instancias[id]) { instancias[id].dispose(); delete instancias[id]; }
+      vaciar(nodo);
+      nodo.appendChild(el("p", "Sin datos para los filtros elegidos.", "vacio"));
+      return;
+    }
+    if (nodo.querySelector(".vacio")) vaciar(nodo);
+    const chart = instancia(id);
+    if (!chart) return;
+    mesesDe[id] = meses;
+    const texto = css("--texto"), suave = css("--suave"), borde = css("--borde");
+    const colorBase = css(unidad === "kWh" ? "--energia" : "--agua");
+    const enRango = (m) => (F.desde === TODOS || m >= F.desde) && (F.hasta === TODOS || m <= F.hasta);
+    const serie = (nombre, datos, color, extra) => ({
+      name: nombre, type: "bar", stack: "total", cursor: "pointer", barMaxWidth: 34, ...extra,
+      data: meses.map((m) => ({ value: Math.round((datos[m] || 0) * 100) / 100, itemStyle: { color, opacity: enRango(m) ? 1 : 0.28 } })),
+    });
+    chart.setOption({
+      animationDuration: 400,
+      textStyle: { color: texto },
+      grid: { left: 52, right: 16, top: 34, bottom: 64 },
+      legend: { top: 0, textStyle: { color: suave } },
+      tooltip: {
+        trigger: "axis", axisPointer: { type: "shadow" },
+        backgroundColor: css("--tarjeta"), borderColor: borde, textStyle: { color: texto },
+        formatter: (ps) => {
+          const m = meses[ps[0].dataIndex];
+          const total = (propio[m] || 0) + (repartido[m] || 0);
+          return `<b>${escapar(m)}</b><br>Total: ${fmt.format(total)} ${u}<br>Recibos del mes: ${fmt.format(propio[m] || 0)} ${u}` +
+            `<br>Repartido de recibos multi‑mes: ${fmt.format(repartido[m] || 0)} ${u}` +
+            (multi[m] ? ` (${multi[m]} recibos)` : "");
+        },
+      },
+      xAxis: { type: "category", data: meses, axisLabel: { color: suave, rotate: meses.length > 8 ? 45 : 0 },
+        axisLine: { lineStyle: { color: borde } }, axisTick: { show: false } },
+      yAxis: { type: "value", axisLabel: { color: suave, formatter: (v) => compacto.format(v) },
+        splitLine: { lineStyle: { color: borde } } },
+      dataZoom: [{ type: "inside", zoomOnMouseWheel: "ctrl", moveOnMouseWheel: false,
+        moveOnMouseMove: false, preventDefaultMouseMove: false }, { type: "slider", height: 16, bottom: 6, borderColor: borde,
+        fillerColor: "rgba(120,140,160,.18)", textStyle: { color: suave }, brushSelect: false }],
+      series: [
+        serie("Recibos de un mes", propio, colorBase),
+        serie("Repartido de recibos de varios meses", repartido, colorBase, { itemStyle: { decal: { symbol: "rect", dashArrayX: 4, dashArrayY: 4, rotation: 0.8 } } }),
+      ],
+    }, true);
+    chart.resize();
+  }
+
   function fijarMes(mes) {
     if (F.desde === mes && F.hasta === mes) { F.desde = TODOS; F.hasta = TODOS; }
     else { F.desde = mes; F.hasta = mes; }
@@ -736,7 +867,7 @@
       const sinMapeo = e.sede === "SIN_MAPEO";
       const fila = filaRank({
         indice: i + 1, nombre: esGrupo ? `CSU · ${e.hijos.length} centros` : etiquetaSede(e.sede), valor: e.valor,
-        max, total, unidad, ico: esGrupo ? "campus" : "edificio", activo: F.sede === e.sede,
+        max, total, unidad, ico: esGrupo ? "campus" : "edificio", activo: F.sede.includes(e.sede),
         alClic: sinMapeo ? null : () => fijar("sede", e.sede),
       });
       if (!esGrupo) { lista.appendChild(fila); return; }
@@ -756,7 +887,7 @@
         const maxH = e.hijos[0].valor || 1;
         e.hijos.forEach((h) => sub.appendChild(filaRank({
           hijo: true, nombre: h.sede, valor: h.valor, max: maxH, total: e.valor || 1, unidad, ico: "pin",
-          activo: F.sede === h.sede, alClic: () => fijar("sede", h.sede),
+          activo: F.sede.includes(h.sede), alClic: () => fijar("sede", h.sede),
         })));
         grupo.appendChild(sub);
       }
@@ -950,7 +1081,7 @@
     function tarjeta(r, ico, nombre, ancha) {
       const t = el("button", null, "tile " + r.nivel + (ancha ? " ancha" : ""));
       t.type = "button";
-      t.setAttribute("aria-pressed", String(F.sede === r.sede));
+      t.setAttribute("aria-pressed", String(F.sede.includes(r.sede)));
       t.appendChild(el("span", r.nivel, "sem " + r.nivel));
       const nom = el("span", null, "tile-nombre");
       nom.appendChild(icono(ico));
@@ -1064,7 +1195,8 @@
     return filas.filter((r) => [r.factura, r.sede, r.archivo, r.prestador, r.cuenta, r.direccion]
       .some((v) => v && String(v).toLowerCase().includes(q)));
   }
-  const colConsumo = { t: "Consumo", v: (r) => `${r.consumo === null ? "" : fmt.format(r.consumo)} ${r.unidad || ""}`, num: true };
+  const colConsumo = { t: "Consumo", v: (r) => `${r.consumo === null ? "" : fmt.format(r.consumo)} ${r.unidad || ""}`, num: true,
+    total: (l) => totalConsumo(l) };
 
   function paginar(lista, clave, infoId, antId, sigId) {
     const paginas = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
@@ -1091,7 +1223,7 @@
       { t: "Cuenta", v: (r) => r.cuenta },
       colConsumo,
       { t: "Detalle", v: (r) => r.detalle },
-    ], visibles, "Sin hallazgos para los filtros elegidos.", abrirDetalle));
+    ], visibles, "Sin hallazgos para los filtros elegidos.", abrirDetalle, lista));
   }
 
   function faltantes() {
@@ -1122,10 +1254,12 @@
       { t: "Cuenta", v: (r) => r.cuenta },
       { t: "Periodo", v: (r) => r.periodo_fin + (r.bimestral ? " (bim.)" : "") },
       colConsumo,
-      { t: "Valor", v: (r) => (r.valor === null ? "" : fmtMoneda.format(r.valor)), num: true },
-      { t: "Aseo", v: (r) => (Number(r.valor_aseo) > 0 ? fmtMoneda.format(r.valor_aseo) : ""), num: true },
+      { t: "Valor", v: (r) => (r.valor === null ? "" : fmtMoneda.format(r.valor)), num: true,
+        total: (l) => fmtMoneda.format(sumaCampo(l, "valor")) },
+      { t: "Aseo", v: (r) => (Number(r.valor_aseo) > 0 ? fmtMoneda.format(r.valor_aseo) : ""), num: true,
+        total: (l) => fmtMoneda.format(sumaCampo(l, "valor_aseo")) },
       { t: "Estado", v: (r) => etiquetaEstado(r.estado) },
-    ], visibles, "Sin facturas para los filtros y la búsqueda.", abrirDetalle));
+    ], visibles, "Sin facturas para los filtros y la búsqueda.", abrirDetalle, lista));
   }
 
   function prestadores() {
@@ -1145,17 +1279,20 @@
     vaciar(caja);
     caja.appendChild(tabla([
       { t: "Prestador", v: (r) => r.prestador },
-      { t: "Facturas", v: (r) => fmt.format(r.n), num: true },
+      { t: "Facturas", v: (r) => fmt.format(r.n), num: true, total: (l) => fmt.format(sumaCampo(l, "n")) },
       { t: "Sin hallazgos", v: (r) => r.ok / r.n, tipo: "mini" },
-      { t: "Atípicos", v: (r) => fmt.format(r.atip), num: true },
-      { t: "Sin medidor", v: (r) => fmt.format(r.sinSerie), num: true },
-      { t: "Baja confianza", v: (r) => fmt.format(r.baja), num: true },
-      { t: "Confianza media", v: (r) => (r.conf / r.n).toFixed(2), num: true },
-    ], lista, "Sin datos."));
+      { t: "Atípicos", v: (r) => fmt.format(r.atip), num: true, total: (l) => fmt.format(sumaCampo(l, "atip")) },
+      { t: "Sin medidor", v: (r) => fmt.format(r.sinSerie), num: true, total: (l) => fmt.format(sumaCampo(l, "sinSerie")) },
+      { t: "Baja confianza", v: (r) => fmt.format(r.baja), num: true, total: (l) => fmt.format(sumaCampo(l, "baja")) },
+      { t: "Confianza media", v: (r) => (r.conf / r.n).toFixed(2), num: true,
+        total: (l) => (sumaCampo(l, "conf") / (sumaCampo(l, "n") || 1)).toFixed(2) },
+    ], lista, "Sin datos.", null, lista));
   }
 
   // ---------- tabla generica ----------
-  function tabla(columnas, filas, vacio, alClic) {
+  // `totales`: lista COMPLETA filtrada (no solo la pagina); si alguna columna trae `total(lista)`
+  // se agrega un pie con los totales de todo lo filtrado.
+  function tabla(columnas, filas, vacio, alClic, totales) {
     if (!filas.length) return el("p", vacio || "Sin registros.", "vacio");
     const t = document.createElement("table");
     const cab = document.createElement("thead"), fc = document.createElement("tr");
@@ -1189,8 +1326,26 @@
       cuerpo.appendChild(tr);
     });
     t.appendChild(cuerpo);
+    if (totales && columnas.some((c) => c.total)) {
+      const pie = document.createElement("tfoot"), tr = document.createElement("tr");
+      columnas.forEach((c, i) => {
+        const td = document.createElement("td");
+        if (c.num) td.className = "num";
+        td.textContent = c.total ? c.total(totales) : (i === 0 ? `Total filtrado · ${fmt.format(totales.length)} filas` : "");
+        tr.appendChild(td);
+      });
+      pie.appendChild(tr);
+      t.appendChild(pie);
+    }
     return t;
   }
+
+  // Totales de consumo por unidad (kWh y m³ no se suman entre si) y de valor, para los pies de tabla.
+  const sumaCampo = (lista, campo) => lista.reduce((a, r) => a + (Number(r[campo]) || 0), 0);
+  const totalConsumo = (lista) => ["kWh", "m3"].map((u) => {
+    const l = lista.filter((r) => r.unidad === u);
+    return l.length ? `${fmt.format(sumaCampo(l, "consumo"))} ${u === "kWh" ? "kWh" : "m³"}` : null;
+  }).filter(Boolean).join(" · ");
 
   // ---------- ficha de la factura ----------
   function abrirDetalle(r) {
@@ -1298,6 +1453,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     $("form-login").addEventListener("submit", ingresar);
+    autoIngreso();
     $("salir").addEventListener("click", salir);
     [["f-desde", "desde"], ["f-hasta", "hasta"]].forEach(([id, clave]) =>
       $(id).addEventListener("change", () => {
@@ -1310,7 +1466,7 @@
         renderizar();
       }));
     $("limpiar").addEventListener("click", () => {
-      Object.keys(F).forEach((k) => { F[k] = TODOS; });
+      limpiarFiltros();
       renderizar();
     });
     document.querySelectorAll(".segmento [data-vista]").forEach((b) =>
@@ -1321,6 +1477,11 @@
       unidadSede = b.dataset.u;
       document.querySelectorAll("#u-sede button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       renderizar();
+    }));
+    document.querySelectorAll("#u-prorrateo button").forEach((b) => b.addEventListener("click", () => {
+      unidadProrrateo = b.dataset.u;
+      document.querySelectorAll("#u-prorrateo button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      graficoProrrateo();
     }));
     document.querySelectorAll("#z-mapa button").forEach((b) => b.addEventListener("click", () => irAVista(b.dataset.z)));
     document.querySelectorAll("#u-mapa button").forEach((b) => b.addEventListener("click", () => {
