@@ -1,0 +1,8 @@
+# Que hace Iniciar_App.bat con git cuando se cierra la app.
+# Cambie el valor de "modo" (sin espacios alrededor del signo =):
+#   preguntar   -> al cerrar la app pregunta "Subir los cambios a GitHub? (S/N)"  (por defecto)
+#   automatico  -> sube sin preguntar
+#   nunca       -> no hace nada con git
+# Solo se sube site/ (dashboard publicado, cifrado) y config/catalogos; nunca datos ni accesos.
+# Si faltan config/accesos_dashboard.txt o las contrasenas, no se publica (ver scripts/subir_a_git.py).
+modo=preguntar
