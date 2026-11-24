@@ -41,6 +41,9 @@
   const vacioF = (k) => (MULTI.includes(k) ? [] : TODOS);
   const sinFiltro = (k) => (MULTI.includes(k) ? F[k].length === 0 : F[k] === TODOS);
   const limpiarFiltros = () => Object.keys(F).forEach((k) => { F[k] = vacioF(k); });
+  // Año actual (hora de Bogotá): es el filtro de periodo por defecto; en febrero de 2027 será 2027.
+  const anioActual = () => Number(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota", year: "numeric" }).format(new Date()));
+  const filtrosPorDefecto = () => { limpiarFiltros(); F.desde = `${anioActual()}-01`; F.hasta = `${anioActual()}-12`; };
   const alternar = (k, v) => { F[k] = F[k].includes(v) ? F[k].filter((x) => x !== v) : [...F[k], v]; };
   const sedeElegida = (s) => F.sede.includes(s) || (F.sede.includes("CSU") && /^CSU\b/.test(s || ""));
   let hallazgo = TODOS;
@@ -238,18 +241,14 @@
   function pildorasRapidos() {
     const caja = $("f-rapidos");
     vaciar(caja);
-    const meses = unicos("ymes");
-    [["Todo", 0], ["3 meses", 3], ["6 meses", 6], ["12 meses", 12]].forEach(([t, n]) => {
-      if (n && meses.length < n) return;
-      const desde = n ? meses[meses.length - n] : TODOS;
-      const b = el("button", t, "pildora chica");
-      b.type = "button";
-      b.setAttribute("aria-pressed", String(F.desde === desde && F.hasta === TODOS));
-      b.addEventListener("click", () => { F.desde = desde; F.hasta = TODOS; resetPag(); renderizar(); });
-      caja.appendChild(b);
-    });
+    // Solo "Todo" (quita el periodo) y los años; ya no hay rangos de 3, 6 o 12 meses.
+    const bt = el("button", "Todo", "pildora chica");
+    bt.type = "button";
+    bt.setAttribute("aria-pressed", String(F.desde === TODOS && F.hasta === TODOS));
+    bt.addEventListener("click", () => { F.desde = TODOS; F.hasta = TODOS; resetPag(); renderizar(); });
+    caja.appendChild(bt);
     // Años (enero-diciembre) desde 2025 hasta el año de hoy: 2027 aparece solo cuando hoy ya es 2027.
-    const hoy = Number(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota", year: "numeric" }).format(new Date()));
+    const hoy = anioActual();
     for (let a = 2025; a <= hoy; a += 1) {
       const b = el("button", String(a), "pildora chica");
       b.type = "button";
@@ -440,7 +439,7 @@
   function iniciar() {
     $("meta").textContent =
       `Datos generados el ${datos.generado} · fuente ${datos.fuente} · ${datos.facturas.length} filas`;
-    limpiarFiltros();
+    filtrosPorDefecto();
     hallazgo = TODOS;
     resetPag();
     abierto.rank = false; abierto.sem = false;
@@ -1562,7 +1561,7 @@
         renderizar();
       }));
     $("limpiar").addEventListener("click", () => {
-      limpiarFiltros();
+      filtrosPorDefecto();
       renderizar();
     });
     document.querySelectorAll(".segmento [data-vista]").forEach((b) =>

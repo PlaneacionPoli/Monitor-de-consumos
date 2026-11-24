@@ -200,6 +200,15 @@
   <!-- ===================== OPERATIVA ===================== -->
   <div id="vista-operativa" hidden>
     <section id="cola-resumen" class="kpis" aria-label="Cola de trabajo"></section>
+    <section class="tarjeta" id="tarjeta-prorr-op" aria-label="Consumo mensual y sus facturas">
+      <div class="cab-tarjeta"><h2 id="t-prorr-op" class="con-icono" data-icono="calendario">Consumo mensual prorrateado</h2>
+        <div class="segmento chico" id="u-prorr-op" role="group" aria-label="Unidad">
+          <button data-u="kWh" aria-pressed="true">kWh</button><button data-u="m3" aria-pressed="false">m³</button>
+        </div></div>
+      <p class="suave pequeno">Los recibos de varios meses se reparten en partes iguales entre los meses que cubren. Haga clic en un mes para ver las facturas que lo componen.</p>
+      <div id="g-prorr-op" class="grafico-ec"></div>
+      <div id="d-prorr-op"></div>
+    </section>
     <nav class="pestanas" role="tablist" aria-label="Operativa">
       <button role="tab" data-tab="cola" data-icono="revision" aria-selected="true">Cola de revisión</button>
       <button role="tab" data-tab="faltantes" data-icono="reloj" aria-selected="false">Faltantes</button>
