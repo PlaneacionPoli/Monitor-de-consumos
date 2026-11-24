@@ -478,7 +478,6 @@
     kpisEjecutivos(filas);
     graficoMensual("g-energia", "kWh", css("--energia"));
     graficoMensual("g-agua", "m3", css("--agua"));
-    graficoProrrateo();
     graficoSedes(filas);
     graficoMapa(filas);
     calidad(filas);
@@ -755,7 +754,6 @@
   // terminando en su mes de referencia (ymes = mes de fin del periodo). Un recibo normal cae entero en su mes.
   // Respeta todos los filtros. Tabla por mes; al elegir un mes se listan las facturas que lo componen.
   let unidadProrrateo = "kWh";
-  let mesProrr = null;                 // mes elegido para ver sus facturas
   const mesAnterior = (ym, k) => {
     let [a, m] = ym.split("-").map(Number);
     m -= k;
@@ -770,9 +768,10 @@
   // Una entrada por (factura, mes que cubre) con su aporte en partes iguales.
   function repartoPorMes(filas) {
     const lista = [];
+    const enRango = (m) => (F.desde === TODOS || m >= F.desde) && (F.hasta === TODOS || m <= F.hasta);
     filas.forEach((r) => {
       const meses = mesesCubiertos(r);
-      meses.forEach((mes) => lista.push({ mes, r, n: meses.length, aporte: (Number(r.consumo) || 0) / meses.length }));
+      meses.filter(enRango).forEach((mes) => lista.push({ mes, r, n: meses.length, aporte: (Number(r.consumo) || 0) / meses.length }));
     });
     return lista;
   }
@@ -788,53 +787,123 @@
   }
   const filasProrrateo = (unidad) => filtradas(false).filter((r) => r.unidad === unidad && r.ymes);
 
-  function graficoProrrateo() { tablaProrrateo("g-prorrateo", "d-prorrateo", "t-prorrateo"); }
-  function graficoProrrateoOperativa() { tablaProrrateo("g-prorr-op", "d-prorr-op", "t-prorr-op"); }
+  // ---------- pestaña "Consumo prorrateado": matriz desplegable ----------
+  // Filas: sede > cuenta > factura (se despliegan con la flecha). Columnas: los meses, arriba.
+  // Cada celda es el consumo del mes; las facturas de varios meses se reparten en partes iguales (celda ámbar).
+  const abiertosMat = new Set();
 
-  function tablaProrrateo(idRes, idDet, idTit) {
+  function matrizProrrateo() {
     const unidad = unidadProrrateo, u = unidad === "kWh" ? "kWh" : "m³";
-    $(idTit).lastChild.textContent = ` Consumo mensual prorrateado · ${u}`;
-    const reparto = repartoPorMes(filasProrrateo(unidad));
-    const resumen = resumenPorMes(reparto);
-    const caja = $(idRes), det = $(idDet);
+    const caja = $("g-prorr");
     vaciar(caja);
-    vaciar(det);
-    if (!resumen.length) {
+    $("t-prorr").lastChild.textContent = ` Consumo prorrateado por mes · ${u}`;
+    const reparto = repartoPorMes(filasProrrateo(unidad));
+    if (!reparto.length) {
       caja.appendChild(el("p", "Sin datos para los filtros elegidos.", "vacio"));
       return;
     }
-    const suma = (l, k) => l.reduce((a, x) => a + (Number(x[k]) || 0), 0);
-    const f = (v) => `${fmt.format(Math.round(v))} ${u}`;
-    caja.appendChild(tabla([
-      { t: "Mes", v: (x) => x.mes },
-      { t: "Facturas asociadas", v: (x) => fmt.format(x.nFacturas), num: true },
-      { t: "De recibos de un mes", v: (x) => f(x.propio), num: true, total: (l) => f(suma(l, "propio")) },
-      { t: "Repartido de recibos multi‑mes", v: (x) => f(x.repartido), num: true, total: (l) => f(suma(l, "repartido")) },
-      { t: "Consumo del mes", v: (x) => f(x.total), num: true, total: (l) => f(suma(l, "total")) },
-    ], resumen, "Sin datos.", (x) => { mesProrr = mesProrr === x.mes ? null : x.mes; tablaProrrateo(idRes, idDet, idTit); }, resumen));
-    if (!mesProrr) {
-      det.appendChild(el("p", "Haga clic en un mes de la tabla para ver las facturas que lo componen. El Excel trae todos los meses.", "suave pequeno"));
-      return;
-    }
-    const lista = reparto.filter((x) => x.mes === mesProrr).sort((a, b) => b.aporte - a.aporte);
-    const cab = el("div", null, "cab-tarjeta");
-    cab.appendChild(el("h3", `Facturas que componen ${mesProrr} · ${u}`));
-    const q = el("button", "Quitar mes", "secundario chico-btn");
-    q.type = "button";
-    q.addEventListener("click", () => { mesProrr = null; tablaProrrateo(idRes, idDet, idTit); });
-    cab.appendChild(q);
-    det.appendChild(cab);
-    det.appendChild(tabla([
-      { t: "Sede", v: (x) => x.r.sede },
-      { t: "Prestador", v: (x) => x.r.prestador },
-      { t: "Factura", v: (x) => x.r.factura },
-      { t: "Cuenta", v: (x) => x.r.cuenta },
-      { t: "Periodo facturado", v: (x) => `${x.r.periodo_inicio || ""} a ${x.r.periodo_fin || ""}` },
-      { t: "Meses que cubre", v: (x) => (x.n > 1 ? `${x.n} (se reparte)` : "1"), num: true },
-      { t: "Consumo de la factura", v: (x) => f(Number(x.r.consumo) || 0), num: true,
-        total: (l) => f(l.reduce((a, x) => a + (Number(x.r.consumo) || 0), 0)) },
-      { t: `Aporte a ${mesProrr}`, v: (x) => f(x.aporte), num: true, total: (l) => f(suma(l, "aporte")) },
-    ], lista, "Sin facturas para ese mes.", (x) => abrirDetalle(x.r), lista));
+    const meses = [...new Set(reparto.map((x) => x.mes))].sort();
+    const arbol = {};   // sede -> cuenta -> factura -> { r, n, por: {mes: aporte} }
+    reparto.forEach((x) => {
+      const sede = x.r.sede || "—";
+      const cuenta = `${x.r.servicio || ""} · ${x.r.cuenta || x.r.direccion || x.r.archivo || "sin cuenta"}`;
+      const clave = `${x.r.factura || "sin número"}|${x.r.archivo || ""}`;
+      const c = ((arbol[sede] = arbol[sede] || {})[cuenta] = arbol[sede][cuenta] || {});
+      const f = (c[clave] = c[clave] || { r: x.r, n: x.n, por: {} });
+      f.por[x.mes] = (f.por[x.mes] || 0) + x.aporte;
+    });
+    const sumar = (pors) => {
+      const t = {};
+      pors.forEach((p) => Object.keys(p).forEach((m) => { t[m] = (t[m] || 0) + p[m]; }));
+      return t;
+    };
+    const total = (p) => Object.values(p).reduce((a, v) => a + v, 0);
+
+    const t = document.createElement("table");
+    t.className = "mat";
+    const cab = document.createElement("tr");
+    cab.appendChild(el("th", "Sede · cuenta · factura"));
+    meses.forEach((m) => cab.appendChild(el("th", m)));
+    cab.appendChild(el("th", "Total"));
+    const thead = document.createElement("thead");
+    thead.appendChild(cab);
+    t.appendChild(thead);
+    const cuerpo = document.createElement("tbody");
+    t.appendChild(cuerpo);
+
+    const celdas = (tr, por, reparte) => {
+      meses.forEach((m) => {
+        const td = document.createElement("td");
+        const v = por[m];
+        if (v) {
+          td.textContent = fmt.format(Math.round(v));
+          if (reparte) { td.className = "rep"; td.title = `Factura de ${reparte} meses repartida en partes iguales`; }
+        }
+        tr.appendChild(td);
+      });
+      tr.appendChild(el("td", fmt.format(Math.round(total(por)))));
+    };
+    const fila = (nivel, clave, etiqueta, por, opciones = {}) => {
+      const tr = document.createElement("tr");
+      tr.className = `n${nivel}`;
+      const td = document.createElement("td");
+      if (opciones.hijos) {
+        const b = el("button", abiertosMat.has(clave) ? "▾" : "▸", "mat-chev");
+        b.type = "button";
+        b.setAttribute("aria-expanded", String(abiertosMat.has(clave)));
+        b.setAttribute("aria-label", `${abiertosMat.has(clave) ? "Plegar" : "Desplegar"} ${etiqueta}`);
+        b.addEventListener("click", () => { if (abiertosMat.has(clave)) abiertosMat.delete(clave); else abiertosMat.add(clave); matrizProrrateo(); });
+        td.appendChild(b);
+      }
+      if (opciones.alClic) {
+        const a = el("button", etiqueta, "mat-link");
+        a.type = "button";
+        a.addEventListener("click", opciones.alClic);
+        td.appendChild(a);
+      } else td.appendChild(el("span", etiqueta));
+      tr.appendChild(td);
+      celdas(tr, por, opciones.reparte);
+      cuerpo.appendChild(tr);
+    };
+
+    const sedes = Object.keys(arbol).sort((a, b) => a.localeCompare(b));
+    const porSede = {};
+    sedes.forEach((sede) => {
+      const cuentas = Object.keys(arbol[sede]).sort();
+      porSede[sede] = sumar(cuentas.flatMap((c) => Object.values(arbol[sede][c]).map((f) => f.por)));
+      fila(0, `s:${sede}`, etiquetaSede(sede), porSede[sede], { hijos: true });
+      if (!abiertosMat.has(`s:${sede}`)) return;
+      cuentas.forEach((cuenta) => {
+        const facturas = arbol[sede][cuenta];
+        const kc = `c:${sede}|${cuenta}`;
+        fila(1, kc, cuenta, sumar(Object.values(facturas).map((f) => f.por)), { hijos: true });
+        if (!abiertosMat.has(kc)) return;
+        Object.values(facturas).sort((a, b) => String(a.r.periodo_fin).localeCompare(String(b.r.periodo_fin))).forEach((f) =>
+          fila(2, "", `${f.r.factura || "Sin número"} · ${f.r.periodo_inicio || ""} a ${f.r.periodo_fin || ""}`, f.por,
+            { alClic: () => abrirDetalle(f.r), reparte: f.n > 1 ? f.n : 0 }));
+      });
+    });
+
+    const pie = document.createElement("tfoot"), tr = document.createElement("tr");
+    tr.appendChild(el("td", "Total"));
+    celdas(tr, sumar(Object.values(porSede)), 0);
+    pie.appendChild(tr);
+    t.appendChild(pie);
+
+    const ctl = el("div", null, "mat-ctl");
+    [["Desplegar sedes", () => { sedes.forEach((s) => abiertosMat.add(`s:${s}`)); matrizProrrateo(); }],
+      ["Desplegar todo", () => { sedes.forEach((s) => { abiertosMat.add(`s:${s}`); Object.keys(arbol[s]).forEach((c) => abiertosMat.add(`c:${s}|${c}`)); }); matrizProrrateo(); }],
+      ["Plegar todo", () => { abiertosMat.clear(); matrizProrrateo(); }]].forEach(([texto, fn]) => {
+      const b = el("button", texto, "secundario chico-btn");
+      b.type = "button";
+      b.addEventListener("click", fn);
+      ctl.appendChild(b);
+    });
+    caja.appendChild(ctl);
+    const marco = el("div", null, "mat-scroll");
+    marco.appendChild(t);
+    caja.appendChild(marco);
+    caja.appendChild(el("p", "Las celdas en ámbar son facturas de varios meses repartidas en partes iguales entre los meses que cubren. Clic en una factura abre su ficha.", "suave pequeno"));
   }
 
   // ---------- Excel (.xlsx real, sin librerias): ZIP sin compresion + XML minimo ----------
@@ -1258,12 +1327,12 @@
 
   // ===== OPERATIVA =====
   function operativa() {
-    graficoProrrateoOperativa();
     resumenCola();
     if (tab === "cola") cola();
     if (tab === "faltantes") faltantes();
     if (tab === "facturas") facturas();
     if (tab === "prestadores") prestadores();
+    if (tab === "prorrateo") matrizProrrateo();
   }
 
   const esAtipico = (r) => r.estado === "ATIPICO_REVISAR";
@@ -1574,7 +1643,7 @@
     tab = t;
     document.querySelectorAll(".pestanas button").forEach((b) =>
       b.setAttribute("aria-selected", String(b.dataset.tab === t)));
-    ["cola", "faltantes", "facturas", "prestadores"].forEach((x) => { $("tab-" + x).hidden = x !== t; });
+    ["cola", "faltantes", "facturas", "prorrateo", "prestadores"].forEach((x) => { $("tab-" + x).hidden = x !== t; });
     renderizar();
   }
 
@@ -1605,13 +1674,13 @@
       document.querySelectorAll("#u-sede button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       renderizar();
     }));
-    document.querySelectorAll("#u-prorrateo button, #u-prorr-op button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("#u-prorr button").forEach((b) => b.addEventListener("click", () => {
       unidadProrrateo = b.dataset.u;
-      document.querySelectorAll("#u-prorrateo button, #u-prorr-op button").forEach((x) =>
+      document.querySelectorAll("#u-prorr button").forEach((x) =>
         x.setAttribute("aria-pressed", String(x.dataset.u === unidadProrrateo)));
-      if (vista === "ejecutiva") graficoProrrateo(); else graficoProrrateoOperativa();
+      matrizProrrateo();
     }));
-    document.querySelectorAll("#xl-prorrateo, #xl-prorr-op").forEach((b) => b.addEventListener("click", descargarProrrateo));
+    document.querySelectorAll("#xl-prorr").forEach((b) => b.addEventListener("click", descargarProrrateo));
     document.querySelectorAll("#z-mapa button").forEach((b) => b.addEventListener("click", () => irAVista(b.dataset.z)));
     document.querySelectorAll("#u-mapa button").forEach((b) => b.addEventListener("click", () => {
       unidadMapa = b.dataset.u;

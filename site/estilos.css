@@ -378,3 +378,17 @@ dialog#detalle[open]{animation:pop .22s ease-out}
 table tfoot td { font-weight: 700; border-top: 2px solid var(--borde); background: rgba(120,140,160,.10); }
 .leyenda-mapa{display:flex;flex-wrap:wrap;gap:.4rem 1rem;margin:.5rem 0;font-size:.8rem;color:#263A58}
 .leyenda-mapa i{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;margin-right:.35rem;vertical-align:-1px}
+
+/* Matriz de consumo prorrateado: meses en columnas, filas desplegables */
+.mat-ctl { display: flex; gap: .5rem; margin: .25rem 0 .6rem; flex-wrap: wrap; }
+.mat-scroll { overflow-x: auto; max-width: 100%; }
+.mat { border-collapse: collapse; width: 100%; font-size: .85rem; }
+.mat th, .mat td { padding: .35rem .6rem; border-bottom: 1px solid var(--borde); white-space: nowrap; text-align: right; }
+.mat th:first-child, .mat td:first-child { text-align: left; position: sticky; left: 0; z-index: 1; min-width: 280px; background: var(--tarjeta); }
+.mat thead th { background: var(--tarjeta); font-weight: 700; }
+.mat tr.n0 td { font-weight: 700; }
+.mat tr.n1 td:first-child { padding-left: 1.6rem; }
+.mat tr.n2 td:first-child { padding-left: 3rem; font-weight: 400; }
+.mat td.rep { background: rgba(232,163,61,.30); }
+.mat-chev { border: 0; background: none; cursor: pointer; font-size: .9rem; width: 1.3rem; color: inherit; }
+.mat-link { border: 0; background: none; cursor: pointer; color: inherit; text-decoration: underline; font: inherit; padding: 0; text-align: left; }

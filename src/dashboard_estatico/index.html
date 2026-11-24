@@ -165,16 +165,6 @@
         <p id="sin-sede" class="suave pequeno"></p>
       </div>
     </div>
-    <section class="tarjeta" id="tarjeta-prorrateo" aria-label="Consumo mensual prorrateado">
-      <div class="cab-tarjeta"><h2 id="t-prorrateo" class="con-icono" data-icono="calendario">Consumo mensual prorrateado</h2>
-        <div class="segmento chico" id="u-prorrateo" role="group" aria-label="Unidad">
-          <button data-u="kWh" aria-pressed="true">kWh</button><button data-u="m3" aria-pressed="false">m³</button>
-        </div>
-        <button id="xl-prorrateo" class="secundario chico-btn" type="button">Descargar Excel</button></div>
-      <p class="suave pequeno">Los recibos que cubren varios meses (p. ej. bimestrales de marzo y abril) se reparten en partes iguales entre los meses que cubren; así cada mes refleja su consumo real.</p>
-      <div id="g-prorrateo"></div>
-      <div id="d-prorrateo"></div>
-    </section>
     <section class="tarjeta" id="tarjeta-mapa" aria-label="Mapa de sedes">
       <div class="cab-tarjeta"><h2 id="t-mapa" class="con-icono" data-icono="pin">Mapa de sedes</h2>
         <div class="segmento chico" id="u-mapa" role="group" aria-label="Medida del mapa">
@@ -202,20 +192,11 @@
   <!-- ===================== OPERATIVA ===================== -->
   <div id="vista-operativa" hidden>
     <section id="cola-resumen" class="kpis" aria-label="Cola de trabajo"></section>
-    <section class="tarjeta" id="tarjeta-prorr-op" aria-label="Consumo mensual y sus facturas">
-      <div class="cab-tarjeta"><h2 id="t-prorr-op" class="con-icono" data-icono="calendario">Consumo mensual prorrateado</h2>
-        <div class="segmento chico" id="u-prorr-op" role="group" aria-label="Unidad">
-          <button data-u="kWh" aria-pressed="true">kWh</button><button data-u="m3" aria-pressed="false">m³</button>
-        </div>
-        <button id="xl-prorr-op" class="secundario chico-btn" type="button">Descargar Excel</button></div>
-      <p class="suave pequeno">Los recibos de varios meses se reparten en partes iguales entre los meses que cubren. Haga clic en un mes para ver las facturas que lo componen.</p>
-      <div id="g-prorr-op"></div>
-      <div id="d-prorr-op"></div>
-    </section>
     <nav class="pestanas" role="tablist" aria-label="Operativa">
       <button role="tab" data-tab="cola" data-icono="revision" aria-selected="true">Cola de revisión</button>
       <button role="tab" data-tab="faltantes" data-icono="reloj" aria-selected="false">Faltantes</button>
       <button role="tab" data-tab="facturas" data-icono="archivo" aria-selected="false">Todas las facturas</button>
+      <button role="tab" data-tab="prorrateo" data-icono="calendario" aria-selected="false">Consumo prorrateado</button>
       <button role="tab" data-tab="prestadores" data-icono="enchufe" aria-selected="false">Calidad por prestador</button>
     </nav>
 
@@ -245,6 +226,16 @@
         <div class="paginas"><button id="ant" class="secundario" type="button">‹</button>
           <span id="pag-info" class="suave"></span>
           <button id="sig" class="secundario" type="button">›</button></div>
+      </div>
+    </section>
+    <section id="tab-prorrateo" class="panel" hidden>
+      <div class="tarjeta">
+        <div class="cab-tarjeta"><h2 id="t-prorr" class="con-icono" data-icono="calendario">Consumo prorrateado por mes</h2>
+          <div class="segmento chico" id="u-prorr" role="group" aria-label="Unidad">
+            <button data-u="kWh" aria-pressed="true">kWh</button><button data-u="m3" aria-pressed="false">m³</button>
+          </div>
+          <button id="xl-prorr" class="secundario chico-btn" type="button">Descargar Excel</button></div>
+        <div id="g-prorr"></div>
       </div>
     </section>
     <section id="tab-prestadores" class="panel" hidden>
