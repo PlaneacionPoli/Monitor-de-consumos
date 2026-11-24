@@ -210,8 +210,17 @@
   }
 
   function sincronizarSelects() {
-    $("f-desde").value = F.desde;
-    $("f-hasta").value = F.hasta;
+    [["f-desde", F.desde], ["f-hasta", F.hasta]].forEach(([id, v]) => {
+      const sel = $(id);
+      if (v !== TODOS && ![...sel.options].some((o) => o.value === v)) {
+        const o = el("option", v);
+        o.value = v;
+        sel.appendChild(o);
+        [...sel.options].filter((x) => x.value !== TODOS).sort((x, y) => x.value.localeCompare(y.value))
+          .forEach((x) => sel.appendChild(x));
+      }
+      sel.value = v;
+    });
   }
 
   function fijar(clave, valor) {
@@ -564,7 +573,7 @@
 
   function graficoValorMes(filas) {
     const por = {};
-    filtradas(true).filter((r) => r.ymes).forEach((r) => {
+    filtradas(false).filter((r) => r.ymes).forEach((r) => {
       const m = (por[r.ymes] = por[r.ymes] || {});
       Object.entries(componentes(r)).forEach(([k, v]) => { m[k] = (m[k] || 0) + v; });
     });
@@ -575,7 +584,7 @@
 
   function graficoAtipicosMes(filas) {
     const por = {};
-    filtradas(true).filter((r) => r.ymes && esAtipico(r)).forEach((r) => {
+    filtradas(false).filter((r) => r.ymes && esAtipico(r)).forEach((r) => {
       const m = (por[r.ymes] = por[r.ymes] || { AUMENTO: 0, CAIDA: 0 });
       m[r.sentido === "CAIDA" ? "CAIDA" : "AUMENTO"] += 1;
     });
@@ -681,7 +690,7 @@
 
   // Serie mensual: ignora el filtro de periodo (conserva el contexto) y resalta el rango elegido.
   function graficoMensual(id, unidad, color) {
-    const filas = filtradas(true).filter((r) => r.unidad === unidad && r.ymes);
+    const filas = filtradas(false).filter((r) => r.unidad === unidad && r.ymes);
     const nodo = $(id);
     const por = {}, medidores = {};
     filas.forEach((r) => {
@@ -741,12 +750,12 @@
     chart.resize();
   }
 
-  // ---------- consumo mensual prorrateado ----------
+  // ---------- consumo mensual prorrateado (tabla + Excel) ----------
   // Un recibo de varios meses (dias ~60) se reparte en partes iguales entre los meses que cubre,
   // terminando en su mes de referencia (ymes = mes de fin del periodo). Un recibo normal cae entero en su mes.
-  // Se dibuja en Ejecutiva (clic = filtra el mes) y en Operativa (clic = lista las facturas que aportan al mes).
+  // Respeta todos los filtros. Tabla por mes; al elegir un mes se listan las facturas que lo componen.
   let unidadProrrateo = "kWh";
-  let mesProrr = null;                 // mes elegido en Operativa para ver sus facturas
+  let mesProrr = null;                 // mes elegido para ver sus facturas
   const mesAnterior = (ym, k) => {
     let [a, m] = ym.split("-").map(Number);
     m -= k;
@@ -757,130 +766,153 @@
     const n = Math.max(1, r.bimestral ? 2 : Math.round((Number(r.dias) || 30) / 30));
     return Array.from({ length: n }, (_, i) => mesAnterior(r.ymes, n - 1 - i));
   };
-  const COLOR_REPARTIDO = "#E8A33D";
 
-  function graficoProrrateo() {
-    dibujarProrrateo({ id: "g-prorrateo", titulo: "t-prorrateo", operativa: false });
-  }
-  function graficoProrrateoOperativa() {
-    dibujarProrrateo({ id: "g-prorr-op", titulo: "t-prorr-op", operativa: true });
-    detalleProrrateo();
-  }
-
-  const filasProrrateo = () => filtradas(true).filter((r) => r.unidad === unidadProrrateo && r.ymes);
-
-  function dibujarProrrateo({ id, titulo, operativa }) {
-    const unidad = unidadProrrateo, nodo = $(id);
-    const u = unidad === "kWh" ? "kWh" : "m³";
-    $(titulo).lastChild.textContent = ` Consumo mensual prorrateado · ${u}`;
-    const propio = {}, repartido = {}, multi = {};
-    filasProrrateo().forEach((r) => {
-      const meses = mesesCubiertos(r), parte = (Number(r.consumo) || 0) / meses.length;
-      meses.forEach((m) => {
-        if (meses.length === 1) propio[m] = (propio[m] || 0) + parte;
-        else { repartido[m] = (repartido[m] || 0) + parte; multi[m] = (multi[m] || 0) + 1; }
-      });
-    });
-    const meses = [...new Set([...Object.keys(propio), ...Object.keys(repartido)])].sort();
-    if (!meses.length) {
-      if (instancias[id]) { instancias[id].dispose(); delete instancias[id]; }
-      vaciar(nodo);
-      nodo.appendChild(el("p", "Sin datos para los filtros elegidos.", "vacio"));
-      return;
-    }
-    if (nodo.querySelector(".vacio")) vaciar(nodo);
-    const nueva = !instancias[id];
-    const chart = instancia(id);
-    if (!chart) return;
-    if (operativa) {
-      delete mesesDe[id];              // el clic de Operativa no filtra: abre el detalle del mes
-      if (nueva) chart.on("click", (p) => {
-        const m = p.name;
-        mesProrr = mesProrr === m ? null : m;
-        graficoProrrateoOperativa();
-      });
-    } else mesesDe[id] = meses;
-    const texto = css("--texto"), suave = css("--suave"), borde = css("--borde");
-    const colorBase = css(unidad === "kWh" ? "--energia" : "--agua");
-    const enRango = (m) => (F.desde === TODOS || m >= F.desde) && (F.hasta === TODOS || m <= F.hasta);
-    const serie = (nombre, datos, color) => ({
-      name: nombre, type: "bar", stack: "total", cursor: "pointer", barMaxWidth: 34,
-      color, itemStyle: { color },
-      data: meses.map((m) => ({
-        value: Math.round((datos[m] || 0) * 100) / 100,
-        itemStyle: { color, opacity: operativa ? (mesProrr && mesProrr !== m ? 0.35 : 1) : (enRango(m) ? 1 : 0.28),
-          borderColor: operativa && mesProrr === m ? texto : "transparent", borderWidth: operativa && mesProrr === m ? 2 : 0 },
-      })),
-    });
-    chart.setOption({
-      animationDuration: 400,
-      textStyle: { color: texto },
-      grid: { left: 52, right: 16, top: 34, bottom: 64 },
-      legend: { top: 0, textStyle: { color: suave } },
-      tooltip: {
-        trigger: "axis", axisPointer: { type: "shadow" },
-        backgroundColor: css("--tarjeta"), borderColor: borde, textStyle: { color: texto },
-        formatter: (ps) => {
-          const m = meses[ps[0].dataIndex];
-          const total = (propio[m] || 0) + (repartido[m] || 0);
-          return `<b>${escapar(m)}</b><br>Total: ${fmt.format(total)} ${u}<br>Recibos del mes: ${fmt.format(propio[m] || 0)} ${u}` +
-            `<br>Repartido de recibos multi‑mes: ${fmt.format(repartido[m] || 0)} ${u}` +
-            (multi[m] ? ` (${multi[m]} recibos)` : "") + (operativa ? "<br><i>Clic: ver las facturas del mes</i>" : "");
-        },
-      },
-      xAxis: { type: "category", data: meses, axisLabel: { color: suave, rotate: meses.length > 8 ? 45 : 0 },
-        axisLine: { lineStyle: { color: borde } }, axisTick: { show: false } },
-      yAxis: { type: "value", axisLabel: { color: suave, formatter: (v) => compacto.format(v) },
-        splitLine: { lineStyle: { color: borde } } },
-      dataZoom: [{ type: "inside", zoomOnMouseWheel: "ctrl", moveOnMouseWheel: false,
-        moveOnMouseMove: false, preventDefaultMouseMove: false }, { type: "slider", height: 16, bottom: 6, borderColor: borde,
-        fillerColor: "rgba(120,140,160,.18)", textStyle: { color: suave }, brushSelect: false }],
-      series: [
-        serie("Recibos de un mes", propio, colorBase),
-        serie("Repartido de recibos de varios meses", repartido, COLOR_REPARTIDO),
-      ],
-    }, true);
-    chart.resize();
-  }
-
-  // Facturas que aportan al mes elegido (Operativa): las de ese mes y las multi-mes que lo cubren.
-  function detalleProrrateo() {
-    const caja = $("d-prorr-op"), u = unidadProrrateo === "kWh" ? "kWh" : "m³";
-    vaciar(caja);
-    if (!mesProrr) {
-      caja.appendChild(el("p", "Haga clic en un mes del gráfico para ver las facturas que lo componen.", "suave pequeno"));
-      return;
-    }
+  // Una entrada por (factura, mes que cubre) con su aporte en partes iguales.
+  function repartoPorMes(filas) {
     const lista = [];
-    filasProrrateo().forEach((r) => {
+    filas.forEach((r) => {
       const meses = mesesCubiertos(r);
-      if (meses.includes(mesProrr)) lista.push({ r, n: meses.length, aporte: (Number(r.consumo) || 0) / meses.length });
+      meses.forEach((mes) => lista.push({ mes, r, n: meses.length, aporte: (Number(r.consumo) || 0) / meses.length }));
     });
-    lista.sort((x, y) => y.aporte - x.aporte);
-    const cab = el("div", null, "cab-tarjeta");
-    cab.appendChild(el("h3", `Facturas de ${mesProrr} · ${u}`));
-    const x = el("button", "Quitar mes", "secundario chico-btn");
-    x.type = "button";
-    x.addEventListener("click", () => { mesProrr = null; graficoProrrateoOperativa(); });
-    cab.appendChild(x);
-    caja.appendChild(cab);
-    const suma = (l, k) => l.reduce((a, i) => a + (Number(i[k]) || 0), 0);
+    return lista;
+  }
+  function resumenPorMes(reparto) {
+    const por = {};
+    reparto.forEach((x) => {
+      const o = (por[x.mes] = por[x.mes] || { mes: x.mes, propio: 0, repartido: 0, facturas: new Set() });
+      if (x.n === 1) o.propio += x.aporte; else o.repartido += x.aporte;
+      o.facturas.add(x.r);
+    });
+    return Object.values(por).sort((a, b) => a.mes.localeCompare(b.mes))
+      .map((o) => ({ ...o, total: o.propio + o.repartido, nFacturas: o.facturas.size }));
+  }
+  const filasProrrateo = (unidad) => filtradas(false).filter((r) => r.unidad === unidad && r.ymes);
+
+  function graficoProrrateo() { tablaProrrateo("g-prorrateo", "d-prorrateo", "t-prorrateo"); }
+  function graficoProrrateoOperativa() { tablaProrrateo("g-prorr-op", "d-prorr-op", "t-prorr-op"); }
+
+  function tablaProrrateo(idRes, idDet, idTit) {
+    const unidad = unidadProrrateo, u = unidad === "kWh" ? "kWh" : "m³";
+    $(idTit).lastChild.textContent = ` Consumo mensual prorrateado · ${u}`;
+    const reparto = repartoPorMes(filasProrrateo(unidad));
+    const resumen = resumenPorMes(reparto);
+    const caja = $(idRes), det = $(idDet);
+    vaciar(caja);
+    vaciar(det);
+    if (!resumen.length) {
+      caja.appendChild(el("p", "Sin datos para los filtros elegidos.", "vacio"));
+      return;
+    }
+    const suma = (l, k) => l.reduce((a, x) => a + (Number(x[k]) || 0), 0);
+    const f = (v) => `${fmt.format(Math.round(v))} ${u}`;
     caja.appendChild(tabla([
-      { t: "Sede", v: (i) => i.r.sede },
-      { t: "Prestador", v: (i) => i.r.prestador },
-      { t: "Factura", v: (i) => i.r.factura },
-      { t: "Cuenta", v: (i) => i.r.cuenta },
-      { t: "Periodo facturado", v: (i) => `${i.r.periodo_inicio || ""} a ${i.r.periodo_fin || ""}` },
-      { t: "Meses que cubre", v: (i) => (i.n > 1 ? `${i.n} (se reparte)` : "1"), num: true },
-      { t: "Consumo de la factura", v: (i) => `${fmt.format(Number(i.r.consumo) || 0)} ${u}`, num: true,
-        total: (l) => `${fmt.format(l.reduce((a, i) => a + (Number(i.r.consumo) || 0), 0))} ${u}` },
-      { t: `Aporte a ${mesProrr}`, v: (i) => `${fmt.format(i.aporte)} ${u}`, num: true,
-        total: (l) => `${fmt.format(suma(l, "aporte"))} ${u}` },
-    ], lista, "Sin facturas para ese mes.", (i) => abrirDetalle(i.r), lista));
+      { t: "Mes", v: (x) => x.mes },
+      { t: "Facturas asociadas", v: (x) => fmt.format(x.nFacturas), num: true },
+      { t: "De recibos de un mes", v: (x) => f(x.propio), num: true, total: (l) => f(suma(l, "propio")) },
+      { t: "Repartido de recibos multi‑mes", v: (x) => f(x.repartido), num: true, total: (l) => f(suma(l, "repartido")) },
+      { t: "Consumo del mes", v: (x) => f(x.total), num: true, total: (l) => f(suma(l, "total")) },
+    ], resumen, "Sin datos.", (x) => { mesProrr = mesProrr === x.mes ? null : x.mes; tablaProrrateo(idRes, idDet, idTit); }, resumen));
+    if (!mesProrr) {
+      det.appendChild(el("p", "Haga clic en un mes de la tabla para ver las facturas que lo componen. El Excel trae todos los meses.", "suave pequeno"));
+      return;
+    }
+    const lista = reparto.filter((x) => x.mes === mesProrr).sort((a, b) => b.aporte - a.aporte);
+    const cab = el("div", null, "cab-tarjeta");
+    cab.appendChild(el("h3", `Facturas que componen ${mesProrr} · ${u}`));
+    const q = el("button", "Quitar mes", "secundario chico-btn");
+    q.type = "button";
+    q.addEventListener("click", () => { mesProrr = null; tablaProrrateo(idRes, idDet, idTit); });
+    cab.appendChild(q);
+    det.appendChild(cab);
+    det.appendChild(tabla([
+      { t: "Sede", v: (x) => x.r.sede },
+      { t: "Prestador", v: (x) => x.r.prestador },
+      { t: "Factura", v: (x) => x.r.factura },
+      { t: "Cuenta", v: (x) => x.r.cuenta },
+      { t: "Periodo facturado", v: (x) => `${x.r.periodo_inicio || ""} a ${x.r.periodo_fin || ""}` },
+      { t: "Meses que cubre", v: (x) => (x.n > 1 ? `${x.n} (se reparte)` : "1"), num: true },
+      { t: "Consumo de la factura", v: (x) => f(Number(x.r.consumo) || 0), num: true,
+        total: (l) => f(l.reduce((a, x) => a + (Number(x.r.consumo) || 0), 0)) },
+      { t: `Aporte a ${mesProrr}`, v: (x) => f(x.aporte), num: true, total: (l) => f(suma(l, "aporte")) },
+    ], lista, "Sin facturas para ese mes.", (x) => abrirDetalle(x.r), lista));
+  }
+
+  // ---------- Excel (.xlsx real, sin librerias): ZIP sin compresion + XML minimo ----------
+  const TABLA_CRC = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n += 1) { let c = n; for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+    return t;
+  })();
+  const crc32 = (b) => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i += 1) c = TABLA_CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  function zipSinCompresion(archivos) {
+    const enc = new TextEncoder(), partes = [], central = [];
+    const u16 = (v) => [v & 255, (v >>> 8) & 255];
+    const u32 = (v) => [v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255];
+    let pos = 0;
+    archivos.forEach((a) => {
+      const nombre = enc.encode(a.nombre), datos = enc.encode(a.texto), crc = crc32(datos), n = datos.length;
+      const comun = [...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(n), ...u32(n), ...u16(nombre.length), ...u16(0)];
+      partes.push(new Uint8Array([...u32(0x04034b50), ...u16(20), ...comun]), nombre, datos);
+      central.push(new Uint8Array([...u32(0x02014b50), ...u16(20), ...u16(20), ...comun, ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(pos)]), nombre);
+      pos += 30 + nombre.length + n;
+    });
+    const tamCentral = central.reduce((s, p) => s + p.length, 0);
+    const fin = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(archivos.length), ...u16(archivos.length),
+      ...u32(tamCentral), ...u32(pos), ...u16(0)]);
+    return new Blob([...partes, ...central, fin],
+      { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  }
+  const xml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]))
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+  const colXlsx = (i) => (i >= 26 ? String.fromCharCode(64 + Math.floor(i / 26)) : "") + String.fromCharCode(65 + (i % 26));
+  function hojaXlsx(filas) {
+    const cuerpo = filas.map((fila, i) => `<row r="${i + 1}">` + fila.map((v, j) => {
+      const ref = colXlsx(j) + (i + 1);
+      if (v === null || v === undefined || v === "") return "";
+      if (typeof v === "number" && Number.isFinite(v)) return `<c r="${ref}"><v>${v}</v></c>`;
+      return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xml(v)}</t></is></c>`;   // texto: nunca se evalua como formula
+    }).join("") + "</row>").join("");
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${cuerpo}</sheetData></worksheet>`;
+  }
+  function libroXlsx(hojas) {   // hojas: [[nombre, filas]]
+    const cab = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+    const rels = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+    return zipSinCompresion([
+      { nombre: "[Content_Types].xml", texto: `${cab}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>` +
+        hojas.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("") + "</Types>" },
+      { nombre: "_rels/.rels", texto: `${cab}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${rels}/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+      { nombre: "xl/workbook.xml", texto: `${cab}<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${rels}"><sheets>` +
+        hojas.map(([n], i) => `<sheet name="${xml(n)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("") + "</sheets></workbook>" },
+      { nombre: "xl/_rels/workbook.xml.rels", texto: `${cab}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">` +
+        hojas.map((_, i) => `<Relationship Id="rId${i + 1}" Type="${rels}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("") + "</Relationships>" },
+      ...hojas.map(([, filas], i) => ({ nombre: `xl/worksheets/sheet${i + 1}.xml`, texto: hojaXlsx(filas) })),
+    ]);
+  }
+
+  // Excel del prorrateo: todos los meses y ambas unidades, con los filtros vigentes.
+  function descargarProrrateo() {
+    const resumen = [["Mes", "Unidad", "Facturas asociadas", "De recibos de un mes", "Repartido de recibos multi-mes", "Consumo del mes"]];
+    const detalle = [["Mes", "Unidad", "Ciudad", "Sede", "Prestador", "Servicio", "Factura", "Cuenta", "Periodo inicio", "Periodo fin",
+      "Meses que cubre", "Consumo de la factura", "Aporte al mes", "Valor de la factura", "Estado", "Archivo"]];
+    ["kWh", "m3"].forEach((unidad) => {
+      const reparto = repartoPorMes(filasProrrateo(unidad));
+      resumenPorMes(reparto).forEach((x) => resumen.push([x.mes, unidad === "kWh" ? "kWh" : "m³", x.nFacturas,
+        Math.round(x.propio * 100) / 100, Math.round(x.repartido * 100) / 100, Math.round(x.total * 100) / 100]));
+      reparto.sort((a, b) => a.mes.localeCompare(b.mes) || b.aporte - a.aporte).forEach((x) => detalle.push([
+        x.mes, unidad === "kWh" ? "kWh" : "m³", x.r.ciudad, x.r.sede, x.r.prestador, x.r.servicio, x.r.factura, x.r.cuenta,
+        x.r.periodo_inicio, x.r.periodo_fin, x.n, Number(x.r.consumo) || 0, Math.round(x.aporte * 100) / 100,
+        Number(x.r.valor) || 0, etiquetaEstado(x.r.estado), x.r.archivo]));
+    });
+    const url = URL.createObjectURL(libroXlsx([["Resumen mensual", resumen], ["Detalle facturas", detalle]]));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "Consumo_mensual_prorrateado.xlsx";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function fijarMes(mes) {
-    if (F.desde === mes && F.hasta === mes) { F.desde = TODOS; F.hasta = TODOS; }
+    if (F.desde === mes && F.hasta === mes) { F.desde = `${mes.slice(0, 4)}-01`; F.hasta = `${mes.slice(0, 4)}-12`; }
     else { F.desde = mes; F.hasta = mes; }
     pag.cola = 0; pag.facturas = 0;
     sincronizarSelects();
@@ -1579,6 +1611,7 @@
         x.setAttribute("aria-pressed", String(x.dataset.u === unidadProrrateo)));
       if (vista === "ejecutiva") graficoProrrateo(); else graficoProrrateoOperativa();
     }));
+    document.querySelectorAll("#xl-prorrateo, #xl-prorr-op").forEach((b) => b.addEventListener("click", descargarProrrateo));
     document.querySelectorAll("#z-mapa button").forEach((b) => b.addEventListener("click", () => irAVista(b.dataset.z)));
     document.querySelectorAll("#u-mapa button").forEach((b) => b.addEventListener("click", () => {
       unidadMapa = b.dataset.u;
